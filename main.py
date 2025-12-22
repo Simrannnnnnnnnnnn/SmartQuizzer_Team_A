@@ -11,26 +11,24 @@ load_dotenv()
 app = Flask(__name__)
 
 # 3. Configuration
-# SECRET_KEY is needed for sessions/logins
-app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev-secret-key-change-me')
-# SQLite database path
+app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev-secret-key-123')
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///smartquizzer.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 # 4. Initialize Extensions
 db = SQLAlchemy(app)
 login_manager = LoginManager(app)
-login_manager.login_view = 'login'
+login_manager.login_view = 'routes.login' # Adjusted to use blueprint if you have one
 
-# 5. Database Table Creation (Automatic for Render)
-# This creates the .db file if it doesn't exist on the server
+# 5. Database Table Creation
 with app.app_context():
-    # from models import User, Quiz  # Import your models here if they are in another file
+    # Note: If your models are in a separate file, import them here
+    # from models import User 
     db.create_all()
 
 # 6. Import Routes
-# IMPORTANT: Put this at the bottom to avoid "circular imports"
-# Ensure your routes.py uses @app.route
-from routes import * if __name__ == '__main__':
-    # Local development run
+# These must be on their own lines
+from routes import *
+
+if __name__ == '__main__':
     app.run(debug=True)
