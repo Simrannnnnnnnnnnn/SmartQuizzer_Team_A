@@ -47,8 +47,9 @@ SmartQuizzer/
 ---
 
 ---
-# ⚙️ **Installation & Setup** Follow these steps to get the project running on your local machine.
 
+# ⚙️ Installation & Setup** Follow these steps to get the project running on your local machine.
+```bash
 # 1. Clone the repository
 git clone https://github.com/Simrannnnnnnnnnnn/SmartQuizzer.git
 cd ai-quiz-generator
@@ -70,10 +71,14 @@ pip install -r requirements.txt
 
 # 5. Run the application
 python main.py
+```
+
 ---
----
-# Contact 
-### Simran Kaur 
-### kaur.simran1542@gmail.com
-### https://github.com/Simrannnnnnnnnnnn/SmartQuizzer
----
+# Contact
+```text
+if you have any questions or feedback, feel free to reach out! 
+### Name : Simran Kaur 
+### Email : kaur.simran1542@gmail.com
+### Github : Simrannnnnnnnnnnn
+### Project Link : https://github.com/Simrannnnnnnnnnnn/SmartQuizzer
+```
