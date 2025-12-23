@@ -6,31 +6,27 @@ from dotenv import load_dotenv
 
 # 1. Load Environment Variables
 load_dotenv()
+base_dir = os.path.abspath(os.path.dirname(__file__))
 
 # 2. Initialize Flask App
 app = Flask(__name__,
-            template_folder ='templates', 
-            static_folder = 'static')
+            template_folder =os.path.join(base_dir,'templates'), 
+            static_folder = os.path.join(base_dir,'static'))
 
 # 3. Configuration
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev-secret-key-123')
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///smartquizzer.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['UPLOAD_FOLDER'] = 'uploads' # Added because your routes use this
+app.config['UPLOAD_FOLDER'] = os.path.join(base_dir,'uploads') # Added because your routes use this
 
-# Ensure upload folder exists
-if not os.path.exists(app.config['UPLOAD_FOLDER']):
-    os.makedirs(app.config['UPLOAD_FOLDER'])
-
-# 4. Initialize Extensions
 db = SQLAlchemy(app)
 login_manager = LoginManager(app)
-login_manager.login_view = 'routes.login' # Updated to match blueprint name
-
-# 5. IMPORT AND REGISTER BLUEPRINT
-# We import routes_bp from the app folder
+login_manager.login_view ='routes.login'
 from app.routes import routes_bp
 app.register_blueprint(routes_bp)
+
+# Ensure upload folder exists
+
 
 # 6. User Loader (Required for Flask-Login)
 from app.models import User
