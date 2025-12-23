@@ -56,7 +56,7 @@ cd ai-quiz-generator
 ### 2. Create and activate a Virtual Environment
 python -m venv venv
 #### On Windows: venv\Scripts\activate
-# On Mac/Linux: source venv/bin/activate
+#### On Mac/Linux: source venv/bin/activate
 
 ### 3. Install dependencies
 pip install -r requirements.txt
