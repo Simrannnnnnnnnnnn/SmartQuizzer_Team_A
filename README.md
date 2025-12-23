@@ -1,25 +1,86 @@
-# SmartQuizzer 🚀 
-### An AI-Powered Adaptive Quiz Generation Platform
+# 🧠 SmartQuizzer: AI-Powered Quiz Generator
+![Python](https://img.shields.io/badge/python-3670A0?style=for-the-badge&logo=python&logoColor=ffdd54)
+![Flask](https://img.shields.io/badge/flask-%23000.svg?style=for-the-badge&logo=flask&logoColor=white)
+![Render](https://img.shields.io/badge/Render-%23430098.svg?style=for-the-badge&logo=render&logoColor=white)
 
-SmartQuizzer is a full-stack web application that transforms study notes, PDFs, or general topics into interactive, high-quality quizzes using Generative AI (Llama-3 via Groq). It features an **Adaptive Learning Engine** that adjusts question difficulty based on student performance.
+SmartQuizzer is a full-stack web application designed to help students and educators generate high-quality quizzes instantly using Artificial Intelligence. Users can input topics, raw text, or even upload PDF documents to create customized multiple-choice questions.
 
-## ✨ Key Features
-* **AI Question Generation:** Instantly creates MCQs and Short Answer questions from PDFs, raw text, or topics.
-* **Adaptive Learning Core:** Uses a proficiency-tracking algorithm to serve Easy, Medium, or Hard questions based on user accuracy.
-* **PDF Intelligence:** Integrated PDF parser to extract and clean text from academic documents.
-* **Secure Architecture:** Implements environment variable management for API keys and hashed password security.
-* **Study Library:** Users can save generated questions to a personal library for future revision.
+**Live Demo:** [https://smartquizzer.onrender.com](https://smartquizzer.onrender.com)
+
+---
+
+## 🚀 Features
+
+- **AI Generation:** Leverages the Groq API (LLM) to generate accurate MCQs with explanations.
+- **Multiple Inputs:** Generate quizzes from text, specific topics, or uploaded PDF files.
+- **User Authentication:** Secure Signup/Login system using Flask-Login.
+- **Personal Library:** Save generated quizzes to a personal dashboard to review or retake later.
+- **Progress Tracking:** Interactive quiz interface with real-time scoring and streak tracking.
+- **Responsive Design:** Mobile-friendly interface built with modern CSS.
+
+---
 
 ## 🛠️ Tech Stack
-* **Frontend:** Flask (Jinja2), Bootstrap 5, CSS3 (Custom Glassmorphism/Neumorphic UI)
-* **Backend:** Python, Flask
-* **Database:** SQLAlchemy (SQLite)
-* **AI Model:** Llama-3-70b (via Groq API)
-* **Authentication:** Flask-Login
 
-## 🚀 Installation & Setup
+- **Backend:** Python (Flask)
+- **Frontend:** HTML5, CSS3, JavaScript
+- **Database:** SQLAlchemy (SQLite)
+- **AI Integration:** Groq API / LLM Client
+- **File Processing:** PyPDF
+- **Deployment:** Render
 
-1. **Clone the repository:**
-   ```bash
-   git clone https://github.com/Simrannnnnnnnnnnn/SmartQuizzer
-   cd SmartQuizzer
+---
+
+## 📂 Project Structure
+
+```text
+SmartQuizzer/
+├── app/                # Backend logic
+│   ├── routes.py       # Flask Blueprints & routing
+│   ├── models.py       # Database schemas (User, Question)
+│   └── llm_client.py   # AI integration logic
+├── templates/          # HTML files (Root level)
+├── static/             # CSS, JS, and Images
+├── main.py             # App entry point
+├── requirements.txt    # Python dependencies
+└── .env                #Environment variables (Hidden)
+
+
+
+## **Installation & Setup** 
+
+### 1- Clone the repository 
+
+```bash
+git clone [https://github.com/Simrannnnnnnnnnnn/SmartQuizzer.git](https://github.com/Simrannnnnnnnnnnn/SmartQuizzer.git)
+cd ai-quiz-generator
+```
+
+### 2- Create a Virtual Environment
+```bash
+python -m venv venv
+on mac = source venv/bin/activate  
+On Windows: venv\Scripts\activate
+```
+
+### 3- Install dependencies
+```bash
+pip install -r requirements.txt
+```
+
+### 4- Set up Environment variable 
+create a .env file in the root and add
+```bash
+GROQ_API_KEY=your_api_key_here
+SECRET_KEY=your_secret_key
+```
+
+### 5- Run the application
+```bash
+python main.py
+```
+
+# Contact 
+## Simran Kaur 
+## kaur.simran1542@gmail.com
+## https://github.com/Simrannnnnnnnnnnn/SmartQuizzer
