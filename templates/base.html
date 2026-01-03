@@ -34,8 +34,6 @@
             transition: 0.2s;
         }
         .nav-links a:hover { color: var(--primary-gold); }
-        
-        /* Global Styles for Buttons and Cards */
         .glass-card { 
             background: white; 
             border: 3px solid #FFEBB7; 
@@ -58,9 +56,6 @@
         }
         .sunshine-btn:active { transform: translateY(3px); box-shadow: 0 2px 0 #E69B00; }
         .sunshine-btn:hover { color: white; opacity: 0.9; }
-        
-        /* Flash Message Styling */
-        .alert { border-radius: 15px; border: none; font-weight: 600; }
     </style>
 </head>
 <body>
@@ -72,7 +67,7 @@
                 <a href="{{ url_for('routes.dashboard') }}">Dashboard</a>
                 <a href="{{ url_for('routes.library') }}">Library 📚</a>
                 <div class="ms-4" style="background: #FFF4E6; padding: 5px 15px; border-radius: 20px; color: var(--accent-orange); font-weight: 800; border: 2px solid #FFEBB7;">
-                    🔥 {{ current_user.streak if current_user.streak else 0 }}
+                    🔥 {{ current_user.streak_count if current_user.streak_count else 0 }}
                 </div>
                 <a href="{{ url_for('routes.logout') }}" style="color: #dc3545; font-size: 0.9rem;">Logout</a>
             {% else %}
@@ -82,18 +77,17 @@
         </div>
     </nav>
 
-    <div class="container mt-4">
+    <div class="container mt-3">
         {% with messages = get_flashed_messages(with_categories=true) %}
           {% if messages %}
             {% for category, message in messages %}
-              <div class="alert alert-{{ 'success' if category == 'success' else 'danger' }} alert-dismissible fade show shadow-sm mx-auto" style="max-width: 800px;" role="alert">
+              <div class="alert alert-{{ category }} alert-dismissible fade show shadow-sm" role="alert" style="border-radius: 15px;">
                 {{ message }}
                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
               </div>
             {% endfor %}
           {% endif %}
         {% endwith %}
-
         {% block content %}{% endblock %}
     </div>
 

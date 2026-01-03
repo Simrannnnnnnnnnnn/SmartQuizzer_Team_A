@@ -1,95 +1,121 @@
 {% extends "base.html" %}
 {% block content %}
 <div class="container mt-5">
-    <div class="welcome-card p-5 text-center" style="background: white; border-radius: 30px; box-shadow: 0 10px 30px rgba(0,0,0,0.1);">
-        <h2 class="mb-2 text-muted">Quiz Complete! 🏁</h2>
-        <h1 class="display-5 font-weight-bold mb-4">Quiz Analytics 📊</h1>
+    <div class="glass-card p-5 shadow-lg mx-auto mb-5" style="max-width: 950px; border-radius: 30px; background: white;">
         
-        <div class="row mt-4 align-items-center">
-            <div class="col-md-5 mb-4">
-                <div style="position: relative; height:280px; width:100%">
-                    <canvas id="accuracyChart"></canvas>
-                    <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);">
-                        <h2 class="mb-0 fw-bold">{{ score }}</h2>
-                        <small class="text-muted">/ {{ total }}</small>
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1 class="fw-bold m-0">Performance Analytics 📈</h1>
+            <a href="{{ url_for('routes.download_report', res_id=session.get('last_result_id', 1)) }}" class="btn btn-outline-danger rounded-pill px-4">
+                <i class="fas fa-file-pdf me-2"></i>Download PDF Report
+            </a>
+        </div>
+
+        <div class="row g-4 mb-5">
+            <div class="col-md-4">
+                <div class="p-4 bg-light rounded-4 text-center h-100 d-flex flex-column justify-content-center">
+                    <canvas id="accuracyPie" style="max-height: 180px;"></canvas>
+                    <h5 class="mt-3 fw-bold">Accuracy: {{ accuracy|round }}%</h5>
+                </div>
+            </div>
+            <div class="col-md-8">
+                <div class="p-4 bg-light rounded-4 h-100">
+                    <h5 class="fw-bold mb-3">AI Recommendation</h5>
+                    <p class="lead text-muted">{{ recommendation }}</p>
+                    <div class="mt-4">
+                        <a href="{{ url_for('routes.dashboard') }}" class="btn btn-warning rounded-pill px-4 me-2">New Quiz</a>
+                        <a href="{{ url_for('routes.library') }}" class="btn btn-outline-dark rounded-pill px-4">Library</a>
                     </div>
                 </div>
             </div>
+        </div>
 
-            <div class="col-md-7 text-start">
-                <div class="p-4 rounded-4 bg-light border">
-                    {% set percent = (score / total * 100) if total > 0 else 0 %}
-                    
-                    <h3 class="fw-bold">
-                        {% if percent >= 80 %} 🌟 Excellent! Mastery Achieved.
-                        {% elif percent >= 50 %} 👍 Good Effort. Getting There!
-                        {% else %} 📚 Keep Learning & Growing.
-                        {% endif %}
-                    </h3>
-                    <p class="lead text-secondary">You scored {{ percent|round(1) }}% on this session.</p>
-                    <hr>
-                    
-                    <h5 class="fw-bold mb-3">Revision Roadmap 🗺️</h5>
-                    <div class="suggestion-box p-3 rounded bg-white border-start border-warning border-5 shadow-sm">
-                        {% if percent >= 80 %}
-                            <p class="mb-1"><strong>Action:</strong> You have a strong grasp! Try a <strong>Topic-based</strong> generation next to challenge yourself with new facts.</p>
-                        {% elif percent >= 50 %}
-                            <p class="mb-1"><strong>Action:</strong> We noticed some gaps. Re-read the <strong>summary sections</strong> of your document to clarify confusing concepts.</p>
-                        {% else %}
-                            <p class="mb-1"><strong>Action:</strong> It's time for a deep dive. Review your source material again and try generating <strong>only 3 MCQs</strong> to master the basics first.</p>
-                        {% endif %}
+        <h3 class="fw-bold mb-4 mt-5">Detailed Review 📝</h3>
+        <div class="review-container">
+            {% for item in session.get('user_answers', []) %}
+            <div class="card mb-4 border-0 shadow-sm rounded-4 overflow-hidden">
+                <div class="d-flex">
+                    <div class="p-3 {% if item.is_correct %}bg-success text-white{% else %}bg-danger text-white{% endif %} d-flex align-items-center">
+                        <h4 class="m-0 fw-bold">{{ loop.index }}</h4>
                     </div>
+                    <div class="card-body p-4">
+                        <h5 class="fw-bold mb-3">{{ item.question }}</h5>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <p class="mb-1 text-muted small uppercase fw-bold">YOUR ANSWER</p>
+                                <p class="{% if item.is_correct %}text-success{% else %}text-danger{% endif %} fw-bold fs-5">
+                                    {{ item.user_ans or "No answer provided" }}
+                                </p>
+                            </div>
+                            {% if not item.is_correct %}
+                            <div class="col-md-6">
+                                <p class="mb-1 text-muted small uppercase fw-bold">CORRECT ANSWER</p>
+                                <p class="text-success fw-bold fs-5">{{ item.correct_ans }}</p>
+                            </div>
+                            {% endif %}
+                        </div>
 
-                    <div class="mt-4 d-flex gap-2">
-                        <a href="{{ url_for('routes.dashboard') }}" class="sunshine-btn flex-grow-1 text-center">New Quiz</a>
-                        <a href="{{ url_for('routes.library') }}" class="btn btn-outline-dark rounded-pill px-4 fw-bold">Library</a>
+                        <div class="mt-3 p-3 bg-light rounded-3 border-start border-warning border-4">
+                            <p class="mb-0 italic"><i class="fas fa-lightbulb me-2 text-warning"></i><strong>AI Explanation:</strong> {{ item.explanation }}</p>
+                        </div>
                     </div>
                 </div>
             </div>
+            {% endfor %}
+        </div>
+
+        <div class="row g-4 mt-4">
+            <div class="col-md-6"><canvas id="scoreBar"></canvas></div>
+            <div class="col-md-6"><canvas id="progressLine"></canvas></div>
         </div>
     </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<style>
-    .score-circle { width: 120px; height: 120px; border: 6px solid #ffcc00; border-radius: 50%; background: #fffdf2; }
-    .rounded-4 { border-radius: 20px !important; }
-    .suggestion-box { font-size: 0.95rem; line-height: 1.5; }
-</style>
-
 <script>
-    const scoreData = {{ score | default(0) | tojson }};
-    const totalData = {{ total | default(0) | tojson }};
-    const incorrectData = totalData - scoreData;
+    // 1. Accuracy Doughnut
+    new Chart(document.getElementById('accuracyPie'), {
+        type: 'doughnut',
+        data: {
+            labels: ['Correct', 'Incorrect'],
+            datasets: [{
+                data: [{{ score }}, {{ total - score }}],
+                backgroundColor: ['#28a745', '#dc3545'],
+                borderWidth: 0
+            }]
+        },
+        options: { plugins: { legend: { display: false } }, cutout: '70%' }
+    });
 
-    const ctx = document.getElementById('accuracyChart').getContext('2d');
-    
-    if (totalData > 0) {
-        new Chart(ctx, {
-            type: 'doughnut',
-            data: {
-                labels: ['Correct', 'Incorrect'],
-                datasets: [{
-                    data: [scoreData, incorrectData],
-                    backgroundColor: ['#ffcc00', '#f1f1f1'],
-                    hoverOffset: 4,
-                    borderWidth: 0
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: { display: false } // Hide legend to keep it clean
-                },
-                cutout: '80%',
-                borderRadius: 10
-            }
-        });
-    } else {
-        ctx.font = "16px sans-serif";
-        ctx.textAlign = "center";
-        ctx.fillText("No quiz data found.", 100, 100);
-    }
+    // 2. Score Bar
+    new Chart(document.getElementById('scoreBar'), {
+        type: 'bar',
+        data: {
+            labels: ['Your Score', 'Perfect Score'],
+            datasets: [{
+                label: 'Points',
+                data: [{{ score }}, {{ total }}],
+                backgroundColor: ['#FFB300', '#eee'],
+                borderRadius: 5
+            }]
+        },
+        options: { plugins: { legend: { display: false } } }
+    });
+
+    // 3. Line Chart
+    new Chart(document.getElementById('progressLine'), {
+        type: 'line',
+        data: {
+            labels: {{ history_labels | tojson }},
+            datasets: [{
+                label: 'Accuracy %',
+                data: {{ history_scores | tojson }},
+                borderColor: '#FFB300',
+                backgroundColor: 'rgba(255, 179, 0, 0.1)',
+                tension: 0.4,
+                fill: true
+            }]
+        }
+    });
 </script>
 {% endblock %}

@@ -1,26 +1,55 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="container mt-5">
+<div class="container mt-4">
     <div class="d-flex justify-content-between align-items-center mb-5">
-        <h1>Your Study Library 📚</h1>
-        <a href="{{ url_for('routes.dashboard') }}" class="sunshine-btn">Generate New</a>
+        <div>
+            <h1 class="fw-bold">Your Learning Library 📚</h1>
+            <p class="text-muted">Review all questions generated from your study sessions.</p>
+        </div>
+        <a href="{{ url_for('routes.dashboard') }}" class="sunshine-btn px-4 py-2 shadow-sm">Generate More</a>
     </div>
 
     {% if not questions %}
-    <div class="text-center p-5 bg-light rounded shadow-sm">
-        <img src="https://img.icons8.com/bubbles/150/000000/empty-box.png">
-        <p class="lead mt-3">Your library is empty. Start by generating some questions!</p>
+    <div class="text-center py-5 glass-card">
+        <div style="font-size: 4rem;">📂</div>
+        <h4 class="mt-3 text-muted">Your library is empty.</h4>
+        <p>Start by uploading a PDF or entering a topic in the dashboard!</p>
     </div>
     {% else %}
     <div class="row">
         {% for q in questions %}
-        <div class="col-md-6 mb-4">
-            <div class="card h-100 border-0 shadow-sm p-4" style="border-radius: 20px;">
-                <span class="badge bg-light text-dark align-self-start mb-2">ID: #{{ q.id }}</span>
-                <h5 class="card-title font-weight-bold">{{ q.question_text }}</h5>
-                <p class="mt-3 text-success"><b>✅ Correct Answer:</b> {{ q.correct_answer }}</p>
-                <div class="mt-2 p-3 bg-light rounded" style="font-size: 0.9rem;">
-                    <b>💡 Explanation:</b> {{ q.explanation }}
+        <div class="col-12 mb-4">
+            <div class="card border-0 shadow-sm" style="border-radius: 20px; border-left: 6px solid #FFB300 !important;">
+                <div class="card-body p-4">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <span class="badge bg-light text-dark border">Question #{{ q.id }}</span>
+                        <span class="badge rounded-pill bg-warning text-dark">{{ q.difficulty_level or 'Standard' }}</span>
+                    </div>
+                    
+                    <h5 class="fw-bold mb-4">{{ q.question_text }}</h5>
+
+                    <div class="row g-2 mb-4">
+                        {% set options = q.options_json|from_json %}
+                        {% for key, val in options.items() %}
+                        <div class="col-md-6">
+                            <div class="p-2 border rounded-3 {% if key == q.correct_answer %}bg-success bg-opacity-10 border-success{% endif %}">
+                                <strong>{{ key }}:</strong> {{ val }}
+                                {% if key == q.correct_answer %} ✅{% endif %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+
+                    <button class="btn btn-link text-decoration-none p-0 text-warning fw-bold" 
+                            type="button" data-bs-toggle="collapse" data-bs-target="#explanation{{ q.id }}">
+                        Show AI Explanation 💡
+                    </button>
+                    
+                    <div class="collapse mt-3" id="explanation{{ q.id }}">
+                        <div class="p-3 bg-light rounded-4 border-start border-warning border-3">
+                            <p class="mb-0 small text-dark"><strong>Reasoning:</strong> {{ q.explanation }}</p>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -28,4 +57,9 @@
     </div>
     {% endif %}
 </div>
+
+<style>
+    .card { transition: transform 0.2s; }
+    .card:hover { transform: scale(1.01); }
+</style>
 {% endblock %}
