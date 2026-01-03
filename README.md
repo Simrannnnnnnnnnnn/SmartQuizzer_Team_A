@@ -1,4 +1,5 @@
 # 🧠 **SmartQuizzer: AI-Powered Quiz Generator**
+**Team A - Final Project | Infosys Internship**
 
 ![Python](https://img.shields.io/badge/python-3670A0?style=for-the-badge&logo=python&logoColor=ffdd54)
 ![Flask](https://img.shields.io/badge/flask-%23000.svg?style=for-the-badge&logo=flask&logoColor=white)
@@ -7,6 +8,18 @@
 SmartQuizzer is a full-stack web application designed to help students and educators generate high-quality quizzes instantly using Artificial Intelligence. Users can input topics, raw text, or even upload PDF documents to create customized multiple-choice questions.
 
 **Live Demo:** [https://smartquizzer.onrender.com](https://smartquizzer.onrender.com)
+## 👥 Team Duties & Assignments
+As discussed, here are the specific responsibilities for each member:
+
+| Member | Duty | Key Files |
+| :--- | :--- | :--- |
+| **@Simran** (Lead) : Project Architecture,Coordination, Final Deployment & Github Management |
+| **@AkashRaja123** | **UI/UX & Auth**: User Interface Design, Authentication, & Personalized Experience |
+| **@ChavalaRevathi** | **Data Ingestion** : Handling PDF/Text Inputs & Processing User Study Materials |
+| **@RiddhiWani** | **Frontend Interactivity**:  Real-time Quiz Features, Dynamic Timers, & Instant Feedback |
+| **@gopika2204** | **AI Engine**:  LLM Integration, Prompt Engineering & Quiz Generation |
+| **Member 5** | **Data Analytics**: Progress Tracking, Streaks, & Performance Visualization|
+
 
 ---
 
