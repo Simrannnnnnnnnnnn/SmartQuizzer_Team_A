@@ -8,17 +8,17 @@
 SmartQuizzer is a full-stack web application designed to help students and educators generate high-quality quizzes instantly using Artificial Intelligence. Users can input topics, raw text, or even upload PDF documents to create customized multiple-choice questions.
 
 **Live Demo:** [https://smartquizzer.onrender.com](https://smartquizzer.onrender.com)
-## 👥 Team Duties & Assignments
-As discussed, here are the specific responsibilities for each member:
 
-| Member | Duty |
-| :--- | :--- | 
-| **@Simran** |: (Lead) |: Project Architecture,Coordination, Final Deployment & Github Management |
-| **@AkashRaja123** | **UI/UX & Auth**: User Interface Design, Authentication, & Personalized Experience |
-| **@ChavalaRevathi** | **Data Ingestion** : Handling PDF/Text Inputs & Processing User Study Materials |
-| **@RiddhiWani** | **Frontend Interactivity**:  Real-time Quiz Features, Dynamic Timers, & Instant Feedback |
-| **@gopika2204** | **AI Engine**:  LLM Integration, Prompt Engineering & Quiz Generation |
-| **Member 5** | **Data Analytics**: Progress Tracking, Streaks, & Performance Visualization|
+## 👥 Team Roles & Responsibilities
+
+| Member | Professional Role | Key Area of Responsibility |
+| :--- | :--- | :--- |
+| **@Simran** | **Team Lead** | **Project Architecture & Deployment**: Managing GitHub, coordinating team workflows, and final project hosting on Render. |
+| **@AkashRaja123** | **UI/UX & Security** | **User Experience & Auth**: Designing the visual interface and building the secure Login/Signup system with personalized dashboards. |
+| **@ChavalaRevathi** | **Data Ingestion** | **Data Processing**: Building the logic to handle PDF uploads, raw text inputs, and preparing study materials for the AI. |
+| **@RiddhiWani** | **Frontend Interactivity** | **Real-time Features**: Developing the 30-second quiz timer and the instant "Correct/Incorrect" feedback pop-ups. |
+| **@gopika2204** | **AI Engine Specialist** | **LLM Integration**: Engineering the Llama-3 (Groq API) prompts to generate accurate MCQs and detailed explanations. |
+| **Member 5** | **Data Analytics** | **Progress Tracking**: Managing the database for user learning streaks and creating performance visualization charts. |
 
 
 ---
