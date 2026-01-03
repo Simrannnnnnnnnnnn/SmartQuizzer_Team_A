@@ -18,7 +18,7 @@ SmartQuizzer is a full-stack web application designed to help students and educa
 | **@ChavalaRevathi** | **Data Ingestion** | **Data Processing**: Building the logic to handle PDF uploads, raw text inputs, and preparing study materials for the AI. |
 | **@RiddhiWani** | **Frontend Interactivity** | **Real-time Features**: Developing the 30-second quiz timer and the instant "Correct/Incorrect" feedback pop-ups. |
 | **@gopika2204** | **AI Engine Specialist** | **LLM Integration**: Engineering the Llama-3 (Groq API) prompts to generate accurate MCQs and detailed explanations. |
-| **Member 5** | **Data Analytics** | **Progress Tracking**: Managing the database for user learning streaks and creating performance visualization charts. |
+| **@Ankita-Kumari0309** | **Data Analytics** | **Progress Tracking**: Managing the database for user learning streaks and creating performance visualization charts. |
 
 
 ---
