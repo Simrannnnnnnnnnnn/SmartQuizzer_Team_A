@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="row g-4 animate__animated animate__fadeIn">
+    <div class="col-lg-8">
+        <div class="glass-card h-100">
+            <h2 class="fw-bold mb-4" style="color: var(--primary-gold);">Create New Quiz ✨</h2>
+            
+            <form action="{{ url_for('routes.handle_generation') }}" method="POST" enctype="multipart/form-data">
+                <div class="mb-4">
+                    <label class="form-label fw-bold text-muted small">SELECT MODE</label>
+                    <div class="d-flex gap-2">
+                        <input type="radio" class="btn-check" name="quiz_goal" id="rev" value="revision" checked>
+                        <label class="btn btn-outline-warning rounded-pill px-4 fw-bold" for="rev">📖 Revision</label>
+
+                        <input type="radio" class="btn-check" name="quiz_goal" id="qz" value="quiz">
+                        <label class="btn btn-outline-danger rounded-pill px-4 fw-bold" for="qz">⏱️ Timed Quiz</label>
+                    </div>
+                </div>
+
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold text-muted small">SOURCE TYPE</label>
+                        <select name="source_type" id="source-select" class="form-select rounded-4 border-2 p-3" style="border-color: #FFEBB7;">
+                            <option value="pdf">📄 PDF Document</option>
+                            <option value="image">📸 Image / Notes</option>
+                            <option value="text">✍️ Raw Text</option>
+                            <option value="topic">🌐 Broad Topic</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold text-muted small">QUESTION COUNT</label>
+                        <input type="number" name="count" class="form-control rounded-4 border-2 p-3" value="5" min="1" max="15" style="border-color: #FFEBB7;">
+                    </div>
+                    <div id="input-area" class="col-12 mt-3">
+                        <input type="file" name="pdf_file" class="form-control rounded-4 p-3" style="border: 2px dashed #FFEBB7;" required>
+                    </div>
+                </div>
+
+                <button type="submit" class="sunshine-btn w-100 py-3 mt-4 fs-5">Generate My Quiz 🪄</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="glass-card mb-4 text-center border-0" style="background: linear-gradient(135deg, #FFF9E6, #FFF); border: 2px solid #FFEBB7 !important;">
+            <h5 class="fw-bold text-muted">Mistake Bank 🧠</h5>
+            <h1 class="display-4 fw-bold" style="color: var(--accent-orange);">{{ mistake_count }}</h1>
+            <p class="small text-muted">Questions waiting for review</p>
+            <a href="{{ url_for('routes.review_mistakes') }}" class="sunshine-btn py-2 px-4 rounded-pill small">Review Now</a>
+        </div>
+
+        <div class="glass-card">
+            <h5 class="fw-bold mb-3">Topic Mastery</h5>
+            {% for topic in topic_mastery %}
+            <div class="mb-3">
+                <div class="d-flex justify-content-between small fw-bold mb-1">
+                    <span>{{ topic.topic_name }}</span>
+                    <span>{{ topic.percentage }}%</span>
+                </div>
+                <div class="progress rounded-pill" style="height: 10px; background: #FFF4E6;">
+                    <div class="progress-bar bg-warning" style="width: {{ topic.percentage }}%"></div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<script>
+    document.getElementById('source-select').onchange = function() {
+        const area = document.getElementById('input-area');
+        if(this.value === 'pdf') area.innerHTML = '<input type="file" name="pdf_file" class="form-control rounded-4 p-3" style="border: 2px dashed #FFEBB7;" required>';
+        else if(this.value === 'image') area.innerHTML = '<input type="file" name="image_file" class="form-control rounded-4 p-3" style="border: 2px dashed #FFEBB7;" required>';
+        else if(this.value === 'text') area.innerHTML = '<textarea name="raw_text" class="form-control rounded-4 p-3" rows="4" style="border: 2px solid #FFEBB7;" placeholder="Paste text here..."></textarea>';
+        else area.innerHTML = '<input type="text" name="topic_name" class="form-control rounded-pill p-3" style="border: 2px solid #FFEBB7;" placeholder="Enter topic (e.g. Biology)">';
+    };
+</script>
+{% endblock %}

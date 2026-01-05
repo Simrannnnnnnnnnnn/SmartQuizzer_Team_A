@@ -1,0 +1,153 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4 animate__animated animate__fadeIn">
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-5 gap-3">
+        <div>
+            <h1 class="fw-bold" style="color: var(--primary-gold);">Your Learning Library 📚</h1>
+            <p class="text-muted">A complete archive of your AI-generated wisdom.</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{{ url_for('routes.review_mistakes') }}" class="btn btn-outline-danger rounded-pill px-4 fw-bold">
+                <i class="fa-solid fa-fire me-2"></i>Review Mistakes
+            </a>
+            <a href="{{ url_for('routes.dashboard') }}" class="sunshine-btn px-4 shadow-sm">
+                <i class="fa-solid fa-plus me-2"></i>New Session
+            </a>
+        </div>
+    </div>
+
+    <div class="mb-4">
+        <input type="text" id="librarySearch" class="form-control rounded-pill px-4 py-3 border-2" 
+               style="border-color: #FFEBB7;" placeholder="🔍 Search your questions...">
+    </div>
+
+    {% if not questions %}
+    <div class="text-center py-5 glass-card animate__animated animate__zoomIn">
+        <div style="font-size: 5rem;">🏜️</div>
+        <h4 class="mt-3 fw-bold text-muted">Your vault is empty!</h4>
+        <p>Upload a PDF or choose a topic in the dashboard to start building your library.</p>
+        <a href="{{ url_for('routes.dashboard') }}" class="sunshine-btn mt-3">Go to Dashboard</a>
+    </div>
+    {% else %}
+    <div class="row" id="questionGrid">
+        {% for q in questions %}
+        <div class="col-md-6 col-lg-4 mb-4 question-card">
+            <div class="glass-card h-100 d-flex flex-column transition-hover border-top-gold p-4">
+                <div class="mb-2 d-flex justify-content-between align-items-center">
+                    <span class="badge bg-light text-muted border rounded-pill">#{{ q.id }}</span>
+                    <span class="text-warning"><i class="fa-solid fa-star"></i></span>
+                </div>
+                
+                <h6 class="fw-bold text-dark mb-4 line-clamp-2" style="height: 3rem; overflow: hidden;">
+                    {{ q.question_text }}
+                </h6>
+
+                <div class="mt-auto">
+                    <button class="sunshine-btn w-100 rounded-pill fw-bold py-2" 
+                            style="font-size: 0.9rem;"
+                            data-bs-toggle="modal" 
+                            data-bs-target="#modal{{ q.id }}">
+                        View Solution 💡
+                    </button>
+                </div>
+            </div>
+
+            <div class="modal fade" id="modal{{ q.id }}" tabindex="-1" aria-labelledby="label{{ q.id }}" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
+                    <div class="modal-content border-0 shadow-lg" style="border-radius: 25px;">
+                        <div class="modal-header border-0 px-4 pt-4">
+                            <h5 class="modal-title fw-bold" id="label{{ q.id }}" style="color: var(--primary-gold);">Question Insight</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body px-4 pb-4">
+                            <h4 class="fw-bold mb-4" style="line-height: 1.4;">{{ q.question_text }}</h4>
+                            
+                            <div class="options-group mb-4">
+                                {% if q.options and q.options.items %}
+                                    {% for key, val in q.options.items() %}
+                                    <div class="p-3 border rounded-4 mb-2 d-flex justify-content-between align-items-center 
+                                        {% if key|string == q.correct_answer|string %}bg-success bg-opacity-10 border-success{% else %}border-light{% endif %}">
+                                        <span><strong class="me-2 text-warning">{{ key }}.</strong> {{ val }}</span>
+                                        {% if key|string == q.correct_answer|string %}
+                                        <span class="badge bg-success rounded-pill px-3">Correct Answer</span>
+                                        {% endif %}
+                                    </div>
+                                    {% endfor %}
+                                {% else %}
+                                    <p class="text-muted">No options available for this question.</p>
+                                {% endif %}
+                            </div>
+
+                            <div class="p-4 rounded-4 shadow-sm" style="background: #FFFDF5; border-left: 6px solid var(--primary-gold); max-height: 400px; overflow-y: auto;">
+                                <h6 class="fw-bold mb-2 text-warning"><i class="fas fa-robot me-2"></i>AI Breakdown</h6>
+                                <p class="mb-0 text-dark" style="font-size: 1rem; line-height: 1.6; word-wrap: break-word;">
+                                    {{ q.explanation if q.explanation else "No explanation provided." }}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+</div>
+
+<style>
+    :root {
+        --primary-gold: #FFB300;
+    }
+    .border-top-gold { border-top: 6px solid var(--primary-gold) !important; }
+    .transition-hover { transition: all 0.3s ease; }
+    .transition-hover:hover { transform: translateY(-8px); box-shadow: 0 15px 30px rgba(255,179,0,0.15) !important; }
+    
+    /* Line clamp ensures cards stay uniform height */
+    .line-clamp-2 { 
+        display: -webkit-box; 
+        -webkit-line-clamp: 2; 
+        -webkit-box-orient: vertical; 
+        overflow: hidden; 
+    }
+    .hidden-card { display: none !important; }
+    
+    .glass-card {
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 20px;
+        box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
+    }
+
+    /* Custom Scrollbar for the AI Breakdown box */
+    .modal-body div::-webkit-scrollbar {
+        width: 6px;
+    }
+    .modal-body div::-webkit-scrollbar-thumb {
+        background-color: var(--primary-gold);
+        border-radius: 10px;
+    }
+</style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const searchInput = document.getElementById('librarySearch');
+        if (searchInput) {
+            searchInput.addEventListener('input', function(e) {
+                const term = e.target.value.toLowerCase();
+                const cards = document.querySelectorAll('.question-card');
+                
+                cards.forEach(card => {
+                    const questionText = card.querySelector('h6').innerText.toLowerCase();
+                    if(questionText.includes(term)) {
+                        card.classList.remove('hidden-card');
+                    } else {
+                        card.classList.add('hidden-card');
+                    }
+                });
+            });
+        }
+    });
+</script>
+{% endblock %}

@@ -3,12 +3,14 @@ import json
 from flask import Flask
 from flask_login import LoginManager
 from dotenv import load_dotenv
-from app.models import db, User  # IMPORT db and User from your models.py
-
+from backend.models import db, User  # Correctly pointing to backend
 
 load_dotenv()
 
-app = Flask(__name__)
+# 1. Update Flask to find your new frontend folder
+app = Flask(__name__, 
+            template_folder=os.path.join('frontend', 'templates'),
+            static_folder=os.path.join('frontend', 'static'))
 
 # --- CONFIGURATION ---
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev-secret-key-123')
@@ -28,7 +30,6 @@ login_manager = LoginManager(app)
 login_manager.login_view = 'routes.login'
 
 # --- JINJA CUSTOM FILTERS ---
-# This filter allows library.html to turn the JSON string back into a Python dictionary
 @app.template_filter('from_json')
 def from_json_filter(value):
     try:
@@ -37,7 +38,8 @@ def from_json_filter(value):
         return {}
 
 # --- BLUEPRINT REGISTRATION ---
-from app.routes import routes_bp
+# 2. Changed from 'app.routes' to 'backend.routes'
+from backend.routes import routes_bp
 app.register_blueprint(routes_bp)
 
 @login_manager.user_loader
@@ -49,6 +51,5 @@ with app.app_context():
     db.create_all()
 
 if __name__ == '__main__':
-    # Using 0.0.0.0 is good for deployment (Docker/Render/Heroku)
     port = int(os.environ.get("PORT", 5000))
     app.run(host='0.0.0.0', port=port, debug=True)
