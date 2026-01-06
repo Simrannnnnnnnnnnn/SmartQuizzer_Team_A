@@ -44,9 +44,10 @@
                 </h6>
 
                 <div class="mt-auto">
-                    <button class="sunshine-btn w-100 rounded-pill fw-bold py-2" 
+                    <button class="sunshine-btn w-100 rounded-pill fw-bold py-2 view-sol-btn" 
                             style="font-size: 0.9rem;"
-                            onclick="openInsight({{ q.question_text|tojson }}, {{ q.explanation|tojson }})">
+                            data-question="{{ q.question_text }}"
+                            data-explanation="{{ q.explanation or 'Correct Answer: ' ~ q.correct_answer }}">
                         View Solution 💡
                     </button>
                 </div>
@@ -70,7 +71,7 @@
                 <div class="ai-breakdown-wrapper p-4 rounded-4 shadow-sm" style="background: #FFFDF5; border-left: 6px solid var(--primary-gold);">
                     <h6 class="fw-bold mb-2 text-warning"><i class="fas fa-robot me-2"></i>AI Breakdown</h6>
                     <div id="modalExplanationText" style="max-height: 350px; overflow-y: auto; font-size: 1rem; line-height: 1.6; color: #333;">
-                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -83,20 +84,8 @@
     .transition-hover { transition: all 0.3s ease; }
     .transition-hover:hover { transform: translateY(-8px); box-shadow: 0 15px 30px rgba(255,179,0,0.15) !important; }
     
-    /* MODAL FIX: Prevent body scroll but allow modal scroll */
-    body.modal-open { 
-        overflow: hidden !important; 
-        padding-right: 0 !important; 
-    }
-    
-    .modal {
-        overflow-y: auto !important;
-    }
-
-    .line-clamp-2 { 
-        display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; 
-    }
-
+    body.modal-open { overflow: hidden !important; padding-right: 0 !important; }
+    .line-clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
     .hidden-card { display: none !important; }
     
     .glass-card {
@@ -106,41 +95,42 @@
         border-radius: 20px;
         box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
     }
-
-    /* Custom Scrollbar for AI box */
     #modalExplanationText::-webkit-scrollbar { width: 6px; }
-    #modalExplanationText::-webkit-scrollbar-thumb { 
-        background-color: var(--primary-gold); 
-        border-radius: 10px; 
-    }
+    #modalExplanationText::-webkit-scrollbar-thumb { background-color: var(--primary-gold); border-radius: 10px; }
 </style>
 
 <script>
-    function openInsight(question, explanation) {
-        // 1. Inject content
-        document.getElementById('modalQuestionText').innerText = question;
-        document.getElementById('modalExplanationText').innerHTML = explanation || "No explanation available for this item.";
-        
-        // 2. Initialize and Show Modal
-        const modalElement = document.getElementById('dynamicInsightModal');
-        const insightModal = new bootstrap.Modal(modalElement);
-        insightModal.show();
-    }
+document.addEventListener('DOMContentLoaded', function() {
+    // 1. MODAL LOGIC (Better Way)
+    const insightModal = new bootstrap.Modal(document.getElementById('dynamicInsightModal'));
+    const modalQuestion = document.getElementById('modalQuestionText');
+    const modalExpl = document.getElementById('modalExplanationText');
 
-    // SEARCH LOGIC
-    document.addEventListener('DOMContentLoaded', function() {
-        const searchInput = document.getElementById('librarySearch');
-        if (searchInput) {
-            searchInput.addEventListener('input', function(e) {
-                const term = e.target.value.toLowerCase();
-                const cards = document.querySelectorAll('.question-card');
-                
-                cards.forEach(card => {
-                    const questionText = card.querySelector('h6').innerText.toLowerCase();
-                    card.classList.toggle('hidden-card', !questionText.includes(term));
-                });
-            });
-        }
+    document.querySelectorAll('.view-sol-btn').forEach(button => {
+        button.addEventListener('click', function() {
+            const question = this.getAttribute('data-question');
+            const explanation = this.getAttribute('data-explanation');
+            
+            modalQuestion.innerText = question;
+            modalExpl.innerText = explanation;
+            
+            insightModal.show();
+        });
     });
+
+    // 2. SEARCH LOGIC
+    const searchInput = document.getElementById('librarySearch');
+    if (searchInput) {
+        searchInput.addEventListener('input', function(e) {
+            const term = e.target.value.toLowerCase();
+            const cards = document.querySelectorAll('.question-card');
+            
+            cards.forEach(card => {
+                const questionText = card.querySelector('h6').innerText.toLowerCase();
+                card.classList.toggle('hidden-card', !questionText.includes(term));
+            });
+        });
+    }
+});
 </script>
 {% endblock %}
