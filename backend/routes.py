@@ -140,7 +140,31 @@ def study_hub():
         return render_template('study_hub_result.html', data=study_bundle)
     
     return render_template('study_hub.html')
+# --- NEW: Simplify Content (ELI10 Logic) ---
+    def simplify_content(self, text):
+        """Simplifies complex text into a 'Explain Like I'm 10' format."""
+        if not text:
+            return "No text provided to simplify."
+
+        prompt = f"""
+        TASK: Explain the following concept like I am a 10-year-old child. 
+        Use simple analogies, avoid jargon, and keep it very engaging and friendly.
         
+        CONCEPT: {text}
+        
+        RESPONSE: Provide only the simplified explanation without any intro like 'Sure' or 'Here is'.
+        """
+
+        try:
+            completion = self.client.chat.completions.create(
+                messages=[{"role": "user", "content": prompt}],
+                model="llama-3.3-70b-versatile",
+                temperature=0.8 # Thoda creative temperature rakha hai analogies ke liye
+            )
+            return completion.choices[0].message.content
+        except Exception as e:
+            print(f"Simplification Error: {e}")
+            return "I tried to make it simpler, but my brain froze! Please try again."       
 
 @routes_bp.route('/dashboard')
 @login_required
