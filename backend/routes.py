@@ -1,4 +1,4 @@
-import json, os, io, time
+import json, os, io, time, base64
 from datetime import datetime, timedelta
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session, send_file, jsonify
 from flask_login import login_user, logout_user, login_required, current_user
@@ -6,14 +6,66 @@ from sqlalchemy import or_
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
 from dotenv import load_dotenv
+from groq import Groq
 
+# Model imports - Adjust paths if your folder structure is different
 from backend.models import User, Question, QuizResult, TopicMastery, MistakeBank, Bookmark, db
-from backend.services import extract_text_from_image, extract_text_from_pdf
+from backend.services import extract_text_from_pdf
 from backend.llm_client import LLMClient
 
 load_dotenv()
 routes_bp = Blueprint('routes', __name__)
+
+# Initialize Clients
+# We use the raw Groq client for Vision and the custom LLMClient for text generation
+client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 llm = LLMClient(api_key=os.getenv("GROQ_API_KEY"))
+
+# ==========================================
+# HELPER: VISION OCR (Saves 800MB RAM)
+# ==========================================
+from PIL import Image  # Add this at the top of routes.py
+import io
+def extract_text_via_groq_vision(file_storage):
+
+    """Sends image to Groq Vision so the server doesn't crash from local OCR."""
+    if not file_storage:
+        return ""
+    try:
+        file_storage.seek(0)
+        img = Image.open(file_storage)
+
+        # 2. Image ko Resize aur Compress karein (RAM bachane ke liye)
+        img.thumbnail((1600, 1600)) 
+        img_byte_arr = io.BytesIO()
+        img = img.convert("RGB") # PNG to JPEG conversion safety
+        img.save(img_byte_arr, format='JPEG', quality=85) 
+        image_bytes = img_byte_arr.getvalue()
+
+        # 3. Base64 Encoding
+        encoded_image = base64.b64encode(image_bytes).decode('utf-8')
+        
+       
+        
+        response = client.chat.completions.create(
+            model="meta-llama/llama-4-scout-17b-16e-instruct",
+            messages=[
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": "Extract all text from this image accurately. If it's a quiz or notes, keep the formatting clear."},
+                        {
+                            "type": "image_url",
+                            "image_url": {"url": f"data:image/jpeg;base64,{encoded_image}"}
+                        }
+                    ]
+                }
+            ]
+        )
+        return response.choices[0].message.content
+    except Exception as e:
+        print(f"Vision API Error: {e}")
+        return ""
 
 # ==========================================
 # AUTHENTICATION
@@ -86,7 +138,7 @@ def dashboard():
                            streak=current_user.streak_count or 0)
 
 # ==========================================
-# GENERATION ENGINE
+# GENERATION ENGINE (Optimized)
 # ==========================================
 
 @routes_bp.route('/handle_generation', methods=['POST'])
@@ -102,7 +154,8 @@ def handle_generation():
             content = extract_text_from_pdf(request.files.get('pdf_file'))
             mastery_label = 'PDF Review'
         elif source_type == 'image':
-            content = extract_text_from_image(request.files.get('image_file'))
+            # Use the RAM-friendly Vision API instead of local OCR
+            content = extract_text_via_groq_vision(request.files.get('image_file'))
             mastery_label = 'Image Review'
         elif source_type == 'text':
             content = request.form.get('raw_text')
@@ -110,6 +163,10 @@ def handle_generation():
         elif source_type == 'topic':
             content = f"Topic focus: {request.form.get('topic_name')}"
             mastery_label = 'Topic Review'
+
+        if not content:
+            flash("No content found to generate questions.", "warning")
+            return redirect(url_for('routes.dashboard'))
 
         raw_qs = llm.generate_questions(content, count)
         q_ids = []
@@ -157,11 +214,9 @@ def quiz_page(q_id):
     else:
         question = Question.query.get_or_404(q_id)
     
-    # Safely handle JSON parsing
     try:
         options_data = json.loads(question.options_json) if isinstance(question.options_json, str) else question.options_json
-    except Exception as e:
-        print(f"Error parsing options: {e}")
+    except:
         options_data = {}
 
     rem_time = 0
@@ -188,7 +243,6 @@ def submit_answer(q_id):
     confidence = request.form.get('confidence', 'medium')
     is_correct = (user_ans.lower() == str(question.correct_answer).lower())
 
-    # Update User Answers for Detailed Review
     if 'user_answers' not in session:
         session['user_answers'] = []
     
@@ -202,15 +256,10 @@ def submit_answer(q_id):
     })
     session['user_answers'] = temp_answers
 
-    # Spaced Repetition Logic
-    days_to_add = 1
-    if is_correct:
-        if confidence == 'high': days_to_add = 7
-        elif confidence == 'medium': days_to_add = 3
-    
+    # Mastery/Spaced Repetition
+    days_to_add = 7 if (is_correct and confidence == 'high') else 3 if is_correct else 1
     next_review_date = datetime.utcnow() + timedelta(days=days_to_add)
 
-    # Mastery Logic
     topic = session.get('quiz_topic', 'Topic Review')
     m = TopicMastery.query.filter_by(user_id=current_user.id, topic_name=topic).first()
     
@@ -218,16 +267,14 @@ def submit_answer(q_id):
         m = TopicMastery(user_id=current_user.id, topic_name=topic, total_count=1, correct_count=0)
         db.session.add(m)
     else:
-        m.total_count = (m.total_count or 0) + 1
+        m.total_count += 1
 
     if is_correct:
-        m.correct_count = (m.correct_count or 0) + 1
+        m.correct_count += 1
         session['score'] = session.get('score', 0) + 1
-        # If it was a mistake review, remove it from the bank upon success
         if session.get('is_mistake_review'):
             db.session.delete(question) 
     else:
-        # Add to Mistake Bank if it's a new error
         if not session.get('is_mistake_review'):
             new_mistake = MistakeBank(
                 user_id=current_user.id, 
@@ -243,8 +290,6 @@ def submit_answer(q_id):
             db.session.add(new_mistake)
 
     db.session.commit()
-    session.modified = True 
-    
     session['current_idx'] = session.get('current_idx', 0) + 1
     q_list = session.get('active_questions', [])
     
@@ -253,7 +298,7 @@ def submit_answer(q_id):
     return redirect(url_for('routes.results'))
 
 # ==========================================
-# ELI5 SIMPLIFIER
+# ELI5 & RESULTS
 # ==========================================
 
 @routes_bp.route('/simplify', methods=['POST'])
@@ -261,19 +306,15 @@ def submit_answer(q_id):
 def simplify():
     data = request.json
     original_text = data.get('explanation', '')
-    prompt = f"Explain the following academic concept like I'm 5 years old using a funny analogy: {original_text}"
+    prompt = f"Explain this like I'm 5 with a funny analogy: {original_text}"
     try:
-        completion = llm.client.chat.completions.create(
+        completion = client.chat.completions.create(
             messages=[{"role": "user", "content": prompt}],
             model="llama-3.3-70b-versatile",
         )
         return jsonify({"simplified": completion.choices[0].message.content})
     except:
-        return jsonify({"simplified": "AI error. Try again."}), 500
-
-# ==========================================
-# RESULTS & REPORTS
-# ==========================================
+        return jsonify({"simplified": "AI error."}), 500
 
 @routes_bp.route('/results')
 @login_required
@@ -282,13 +323,6 @@ def results():
     active_qs = session.get('active_questions', [])
     total = len(active_qs)
     accuracy = (score / total * 100) if total > 0 else 0
-
-    if accuracy >= 80:
-        recommendation = "Outstanding! You've mastered these concepts. Ready for a harder challenge?"
-    elif accuracy >= 50:
-        recommendation = "Solid performance. Review the explanations for missed items to reach 100%."
-    else:
-        recommendation = "Don't get discouraged! Re-read the source material and try Revision Mode."
 
     new_res = QuizResult(user_id=current_user.id, score=score, total_questions=total)
     db.session.add(new_res)
@@ -301,89 +335,44 @@ def results():
     history_labels = [r.date_taken.strftime("%b %d") for r in history_results]
     history_scores = [int((r.score/r.total_questions)*100) if r.total_questions > 0 else 0 for r in history_results]
 
-    session['last_result_id'] = new_res.id 
-    mastery_data = TopicMastery.query.filter_by(user_id=current_user.id).all()
-
     return render_template('results.html', 
-                           score=score, 
-                           total=total, 
-                           accuracy=accuracy, 
-                           recommendation=recommendation,
-                           mastery_data=mastery_data,
-                           history_labels=history_labels,
-                           history_scores=history_scores)
-
-@routes_bp.route('/download_report/<int:res_id>')
-@login_required
-def download_report(res_id):
-    result = QuizResult.query.get_or_404(res_id)
-    buffer = io.BytesIO()
-    p = canvas.Canvas(buffer, pagesize=letter)
-    p.setFont("Helvetica-Bold", 16)
-    p.drawString(100, 750, "Quiz Performance Report")
-    p.setFont("Helvetica", 12)
-    p.drawString(100, 720, f"User: {current_user.username}")
-    p.drawString(100, 700, f"Date: {result.date_taken.strftime('%Y-%m-%d %H:%M')}")
-    p.drawString(100, 680, f"Score: {result.score} / {result.total_questions}")
-    p.drawString(100, 660, f"Accuracy: {(result.score/result.total_questions*100):.1f}%")
-    p.showPage()
-    p.save()
-    buffer.seek(0)
-    return send_file(buffer, as_attachment=True, download_name=f"Report_{res_id}.pdf", mimetype='application/pdf')
+                           score=score, total=total, accuracy=accuracy,
+                           mastery_data=TopicMastery.query.filter_by(user_id=current_user.id).all(),
+                           history_labels=history_labels, history_scores=history_scores)
 
 # ==========================================
-# MISC & REVIEW
+# LIBRARY & REVIEW
 # ==========================================
 
 @routes_bp.route('/review_mistakes')
 @login_required
 def review_mistakes():
     now = datetime.utcnow()
-    # Pull mistakes due for review
-    mistakes = MistakeBank.query.filter(
-        MistakeBank.user_id == current_user.id,
-        MistakeBank.next_review <= now
-    ).all()
-    
-    # Fallback if none are "due" yet so user can still practice
+    mistakes = MistakeBank.query.filter(MistakeBank.user_id == current_user.id, MistakeBank.next_review <= now).all()
     if not mistakes:
         mistakes = MistakeBank.query.filter_by(user_id=current_user.id).limit(10).all()
-    
     if not mistakes:
-        flash("Your Mistake Bank is empty!", "success")
+        flash("No mistakes to review!", "success")
         return redirect(url_for('routes.dashboard'))
     
     m_ids = [m.id for m in mistakes]
     session.update({
-        'active_questions': m_ids, 
-        'is_mistake_review': True, 
-        'current_idx': 0, 
-        'score': 0, 
-        'quiz_goal': 'revision',
-        'quiz_topic': 'Mistake Review',
-        'user_answers': []
+        'active_questions': m_ids, 'is_mistake_review': True, 
+        'current_idx': 0, 'score': 0, 'quiz_goal': 'revision', 'quiz_topic': 'Mistake Review'
     })
     return redirect(url_for('routes.quiz_page', q_id=m_ids[0]))
+
 @routes_bp.route('/library')
 @login_required
 def library():
-    # 1. Only get the 50 most recent questions to prevent the page from freezing
-    questions = Question.query.filter_by(user_id=current_user.id)\
-                        .order_by(Question.id.desc())\
-                        .limit(50).all()
-    
-    # 2. Parse the options safely before sending to the template
+    questions = Question.query.filter_by(user_id=current_user.id).order_by(Question.id.desc()).limit(50).all()
     for q in questions:
-        if q.options_json:
-            try:
-                # If it's already a dict, use it; otherwise, parse it
-                if isinstance(q.options_json, str):
-                    q.options = json.loads(q.options_json)
-                else:
-                    q.options = q.options_json
-            except Exception:
-                q.options = {"Error": "Could not load options"}
-        else:
+        try:
+            q.options = json.loads(q.options_json) if isinstance(q.options_json, str) else q.options_json
+        except:
             q.options = {}
-            
     return render_template('library.html', questions=questions)
+@routes_bp.route('/download_report/<int:res_id>')
+def download_report(res_id):
+    # Abhi ke liye sirf ek message return karwa dete hain testing ke liye
+    return f"Downloading report for result ID: {res_id}"

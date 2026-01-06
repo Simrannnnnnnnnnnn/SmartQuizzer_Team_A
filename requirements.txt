@@ -1,28 +1,23 @@
-# Web Framework & Auth
+# Web Framework
 Flask==3.1.2
 Flask-Bcrypt==1.0.1
 Flask-Login==0.6.3
-Flask-Migrate==4.1.0
 Flask-SQLAlchemy==3.1.1
 Werkzeug==3.1.4
 
-# AI & LLM
+# AI & API (Groq handles the heavy lifting)
 groq==0.37.1
 python-dotenv==1.2.1
 
-# Document & Image Processing
-easyocr==1.7.2
-PyMuPDF==1.26.7
-pypdf==6.4.2
-pillow==12.0.0
-opencv-python-headless==4.12.0.88
+# Document Processing (Memory-efficient)
+pypdf==5.1.0
+pillow==11.0.0
 
-# PDF Generation & Data
-reportlab==4.4.7
-pandas==2.3.3
-numpy==2.2.6
+# PDF Generation
+reportlab==4.2.5
 
 # Database & Utilities
-SQLAlchemy==2.0.45
-requests==2.32.5
+SQLAlchemy==2.0.36
+requests==2.32.3
 gunicorn==23.0.0
+Flask-Migrate==4.1.0
