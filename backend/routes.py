@@ -115,6 +115,33 @@ def logout():
 # DASHBOARD
 # ==========================================
 
+
+@routes_bp.route('/study-hub', methods=['GET', 'POST'])
+@login_required
+def study_hub():
+    if request.method == 'POST':
+        source_type = request.form.get('source_type')
+        content = ""
+        
+        # Dashboard jaisa same extraction logic yahan bhi use karein
+        if source_type == 'pdf':
+            content = extract_text_from_pdf(request.files.get('pdf_file'))
+        elif source_type == 'text':
+            content = request.form.get('raw_text')
+        elif source_type == 'topic':
+            content = f"Generate study materials for: {request.form.get('topic_name')}"
+
+        if not content:
+            flash("Please provide content to learn!", "warning")
+            return redirect(url_for('routes.study_hub'))
+
+        # llm (LLMClient instance) ka use karein
+        study_bundle = llm.generate_study_material(content)
+        return render_template('study_hub_result.html', data=study_bundle)
+    
+    return render_template('study_hub.html')
+        
+
 @routes_bp.route('/dashboard')
 @login_required
 def dashboard():

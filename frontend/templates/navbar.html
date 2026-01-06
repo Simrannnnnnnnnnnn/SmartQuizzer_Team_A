@@ -1,17 +1,127 @@
-<div class="theme-switch-wrapper" style="margin-left: 20px;">
-    <label class="theme-switch" for="checkbox" style="cursor: pointer; display: flex; align-items: center; gap: 10px;">
-        <input type="checkbox" id="checkbox" style="display:none;" />
-        <div class="mode-icon" id="mode-icon" style="color: var(--mauve); font-size: 1.2rem;">
-            <i class="fas fa-moon"></i>
+<nav class="navbar navbar-expand-lg navbar-light glass-nav sticky-top">
+    <div class="container">
+        <a class="navbar-brand fw-bold d-flex align-items-center" href="{{ url_for('routes.index') }}">
+            <span style="color: var(--primary-gold); font-size: 1.5rem;">🧠 Adaptive</span>
+            <span class="ms-1" style="color: #666;">Learn</span>
+        </a>
+
+        <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav ms-auto align-items-center">
+                {% if current_user.is_authenticated %}
+                <li class="nav-item">
+                    <a class="nav-link px-3 fw-medium" href="{{ url_for('routes.dashboard') }}">
+                        <i class="fa-solid fa-house-chimney me-1"></i> Dashboard
+                    </a>
+                </li>
+                
+                <li class="nav-item">
+                    <a class="nav-link px-3 fw-bold text-primary" href="{{ url_for('routes.study_hub') }}">
+                        <i class="fa-solid fa-rocket me-1"></i> Study Hub
+                    </a>
+                </li>
+
+                <li class="nav-item">
+                    <a class="nav-link px-3 fw-medium" href="{{ url_for('routes.library') }}">
+                        <i class="fa-solid fa-book-bookmark me-1"></i> Library
+                    </a>
+                </li>
+
+                <li class="nav-item dropdown ms-lg-3">
+                    <a class="nav-link dropdown-toggle btn btn-light rounded-pill px-4 border" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown">
+                        <i class="fa-solid fa-user-circle me-1"></i> {{ current_user.username }}
+                    </a>
+                    <ul class="dropdown-menu dropdown-menu-end shadow border-0 mt-2" style="border-radius: 15px;">
+                        <li><a class="dropdown-item py-2" href="#"><i class="fa-solid fa-gear me-2"></i> Settings</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item py-2 text-danger" href="{{ url_for('routes.logout') }}"><i class="fa-solid fa-right-from-bracket me-2"></i> Logout</a></li>
+                    </ul>
+                </li>
+                {% else %}
+                <li class="nav-item">
+                    <a class="nav-link fw-medium" href="{{ url_for('routes.login') }}">Login</a>
+                </li>
+                <li class="nav-item ms-lg-2">
+                    <a class="btn sunshine-btn rounded-pill px-4" href="{{ url_for('routes.signup') }}">Join for Free</a>
+                </li>
+                {% endif %}
+
+                <li class="nav-item ms-lg-4">
+                    <div class="theme-switch-wrapper">
+                        <label class="theme-switch" for="checkbox">
+                            <input type="checkbox" id="checkbox" style="display:none;" />
+                            <div class="mode-icon" id="mode-icon">
+                                <i class="fas fa-moon"></i>
+                            </div>
+                        </label>
+                    </div>
+                </li>
+            </ul>
         </div>
-    </label>
-</div>
+    </div>
+</nav>
+
+<style>
+    :root {
+        --primary-gold: #FFB300;
+        --nav-bg: rgba(255, 255, 255, 0.85);
+    }
+
+    [data-theme='dark'] :root {
+        --nav-bg: rgba(26, 26, 26, 0.9);
+    }
+
+    .glass-nav {
+        background: var(--nav-bg);
+        backdrop-filter: blur(12px);
+        border-bottom: 1px solid rgba(0,0,0,0.05);
+        z-index: 1000;
+    }
+
+    .nav-link {
+        transition: all 0.3s ease;
+        font-size: 0.95rem;
+    }
+
+    .nav-link:hover {
+        color: var(--primary-gold) !important;
+        transform: translateY(-1px);
+    }
+
+    /* Theme Switch Styling */
+    .mode-icon {
+        cursor: pointer;
+        padding: 8px;
+        border-radius: 50%;
+        background: #f0f0f0;
+        width: 40px;
+        height: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.3s ease;
+    }
+
+    [data-theme='dark'] .mode-icon {
+        background: #333;
+        color: #FFD700;
+    }
+
+    .mode-icon:hover {
+        transform: scale(1.1);
+        box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+</style>
 
 <script>
     const toggleSwitch = document.querySelector('#checkbox');
     const currentTheme = localStorage.getItem('theme');
     const icon = document.querySelector('#mode-icon');
 
+    // Initial Theme Check
     if (currentTheme) {
         document.documentElement.setAttribute('data-theme', currentTheme);
         if (currentTheme === 'dark') {
@@ -20,6 +130,7 @@
         }
     }
 
+    // Toggle Listener
     toggleSwitch.addEventListener('change', (e) => {
         if (e.target.checked) {
             document.documentElement.setAttribute('data-theme', 'dark');

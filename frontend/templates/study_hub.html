@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container py-5 animate__animated animate__fadeIn">
+    <div class="text-center mb-5">
+        <h1 class="fw-bold display-5" style="color: var(--primary-gold);">🚀 AI Study Hub</h1>
+        <p class="text-muted fs-5">Don't just test yourself, master the concept with AI-powered study aids.</p>
+    </div>
+
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="glass-card p-4 p-md-5 shadow-lg border-top-gold">
+                <form action="{{ url_for('routes.study_hub') }}" method="POST" enctype="multipart/form-data" id="studyForm">
+                    
+                    <ul class="nav nav-pills nav-justified mb-4 gap-2" id="inputTabs" role="tablist">
+                        <li class="nav-item">
+                            <button class="nav-link active rounded-pill fw-bold border" id="topic-tab" data-bs-toggle="pill" data-bs-target="#topicInput" type="button">🔍 Topic</button>
+                        </li>
+                        <li class="nav-item">
+                            <button class="nav-link rounded-pill fw-bold border" id="text-tab" data-bs-toggle="pill" data-bs-target="#textInput" type="button">📝 Text</button>
+                        </li>
+                        <li class="nav-item">
+                            <button class="nav-link rounded-pill fw-bold border" id="pdf-tab" data-bs-toggle="pill" data-bs-target="#pdfInput" type="button">📄 PDF</button>
+                        </li>
+                    </ul>
+
+                    <div class="tab-content mt-4">
+                        <div class="tab-pane fade show active" id="topicInput">
+                            <label class="fw-bold mb-2">What do you want to learn?</label>
+                            <input type="text" name="topic_name" class="form-control rounded-pill px-4 py-3 custom-input" placeholder="e.g., Photosynthesis, Python Loops, etc.">
+                            <input type="hidden" name="source_type" value="topic" id="source_type_field">
+                        </div>
+
+                        <div class="tab-pane fade" id="textInput">
+                            <label class="fw-bold mb-2">Paste your detailed notes here:</label>
+                            <textarea name="raw_text" class="form-control rounded-4 px-4 py-3 custom-input" rows="6" placeholder="Paste the content you want to simplify..."></textarea>
+                        </div>
+
+                        <div class="tab-pane fade" id="pdfInput">
+                            <div class="upload-box border-dashed rounded-4 p-5 text-center">
+                                <i class="fa-solid fa-cloud-arrow-up display-4 text-warning mb-3"></i>
+                                <h5>Upload your PDF Document</h5>
+                                <input type="file" name="pdf_file" class="form-control mt-3 custom-input" accept=".pdf">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="text-center mt-5">
+                        <button type="submit" class="sunshine-btn w-100 py-3 rounded-pill fw-bold fs-5 shadow" id="generateBtn">
+                            Generate Study Material ✨
+                        </button>
+                        <p class="text-muted small mt-3">AI will generate Mnemonics, Flashcards, and Revision Notes.</p>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="loadingOverlay" class="d-none position-fixed top-0 start-0 w-100 h-100 flex-column align-items-center justify-content-center" style="z-index: 9999; background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(8px);">
+    <div class="spinner-grow text-warning" role="status" style="width: 4rem; height: 4rem;"></div>
+    <h4 class="mt-4 fw-bold text-dark animate__animated animate__pulse animate__infinite">AI is crafting your study bundle... 🧠</h4>
+    <p class="text-muted">This usually takes 10-15 seconds</p>
+</div>
+
+<style>
+    :root { --primary-gold: #FFB300; }
+    .border-top-gold { border-top: 6px solid var(--primary-gold) !important; }
+    
+    .nav-pills .nav-link { color: #666; background: #f8f9fa; transition: 0.3s; }
+    .nav-pills .nav-link.active { background: var(--primary-gold) !important; color: white !important; border-color: var(--primary-gold) !important; }
+    
+    .custom-input { border: 2px solid #eee; transition: 0.3s; }
+    .custom-input:focus { border-color: var(--primary-gold); box-shadow: 0 0 10px rgba(255,179,0,0.1); }
+    
+    .border-dashed { border: 2px dashed #dee2e6; background: #fafafa; }
+    
+    /* Show overlay when this class is added */
+    .show-loading { display: flex !important; }
+</style>
+
+<script>
+    const sourceField = document.getElementById('source_type_field');
+    
+    // Tab switching logic
+    document.getElementById('topic-tab').addEventListener('click', () => sourceField.value = 'topic');
+    document.getElementById('text-tab').addEventListener('click', () => sourceField.value = 'text');
+    document.getElementById('pdf-tab').addEventListener('click', () => sourceField.value = 'pdf');
+
+    // Loading Logic: Sirf submit par dikhega
+    document.getElementById('studyForm').addEventListener('submit', function(e) {
+        // Overlay ko dikhao
+        const overlay = document.getElementById('loadingOverlay');
+        overlay.classList.remove('d-none');
+        overlay.classList.add('show-loading');
+        
+        // Button ko disable kardo taaki double click na ho
+        document.getElementById('generateBtn').disabled = true;
+        document.getElementById('generateBtn').innerHTML = "Processing...";
+    });
+</script>
+{% endblock %}
