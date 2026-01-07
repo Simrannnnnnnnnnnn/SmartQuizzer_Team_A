@@ -1,8 +1,18 @@
-# SmartQuizzer 🚀 > (Font: Poppins Bold | Color: #FFB300 | Size: 60pt+)
-## Elevating Raw Data into Cognitive Intelligence > (Font: Poppins | Color: #FFB300)
+<div align="center">
 
-### **Powered By**
-![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB) ![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white) ![Flask](https://img.shields.io/badge/Flask-000000?style=for-the-badge&logo=flask&logoColor=white) ![Groq](https://img.shields.io/badge/Groq_Cloud-F34F29?style=for-the-badge) 
+# <span style="color: #FFB300;">SmartQuizzer 🚀</span>
+### <span style="color: #FFB300;">*Integrated AI Synthesis & Cognitive Mastery Engine*</span>
+
+---
+
+[![Python](https://img.shields.io/badge/Python-3.10+-FFB300?style=for-the-badge&logo=python&logoColor=black)](https://www.python.org/)
+[![Flask](https://img.shields.io/badge/Flask-Framework-FFB300?style=for-the-badge&logo=flask&logoColor=black)](https://flask.palletsprojects.com/)
+[![Groq](https://img.shields.io/badge/AI-Llama--3_via_Groq-FFB300?style=for-the-badge&logo=meta&logoColor=black)](https://groq.com/)
+[![Status](https://img.shields.io/badge/Status-Live_on_Render-green?style=for-the-badge)](https://smartquizzer.onrender.com)
+
+**An End-to-End AI Ecosystem for Automated Content Synthesis and Cognitive Retention.**
+
+</div>
 
 ---
 
@@ -55,8 +65,14 @@
 
 ---
 
-### 🎯 Core Philosophy
-> *"Assessment shouldn't just measure learning—it should drive it."*
+<div align="center">
+
+## 🏛️ Core Philosophy
+# <span style="color: #FFB300;">Synthesize. Retain. Master.</span>
+*Eliminating the friction between information and intelligence.*
+
+---
+</div>
 
 SmartQuizzer operates on three fundamental principles:
 1. **🧠 Adaptive Intelligence:** Questions evolve in real-time based on user accuracy and response speed.
