@@ -58,12 +58,12 @@
     {% endif %}
 </div>
 
-<div class="modal fade" id="dynamicInsightModal" tabindex="-1" aria-hidden="true" style="z-index: 2000;">
+<div class="modal fade" id="dynamicInsightModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="true">
     <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
         <div class="modal-content border-0 shadow-lg" style="border-radius: 25px;">
             <div class="modal-header border-0 px-4 pt-4">
                 <h5 class="modal-title fw-bold" style="color: var(--primary-gold);">Question Insight</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" style="z-index: 2001;"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body px-4 pb-4">
                 <h4 id="modalQuestionText" class="fw-bold mb-4" style="line-height: 1.4;"></h4>
@@ -84,9 +84,10 @@
     .transition-hover { transition: all 0.3s ease; }
     .transition-hover:hover { transform: translateY(-8px); box-shadow: 0 15px 30px rgba(255,179,0,0.15) !important; }
     
-    /* Critical Fix for "Stuck" Modals */
-    .modal-backdrop { z-index: 1050 !important; }
-    .modal { z-index: 1060 !important; }
+    /* MODAL FIX: Prevents non-clickable cross button */
+    .modal { background: rgba(0,0,0,0.5); } /* Manual backdrop feeling */
+    .modal-backdrop { display: none !important; } /* Remove the problematic backdrop layer */
+    
     body.modal-open { overflow: hidden !important; padding-right: 0 !important; }
     
     .line-clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
@@ -105,41 +106,32 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Initialize Modal
     const modalEl = document.getElementById('dynamicInsightModal');
-    const insightModal = new bootstrap.Modal(modalEl);
+    // Important: No custom bootstrap instance needed if data-bs tags are used
     const modalQuestion = document.getElementById('modalQuestionText');
     const modalExpl = document.getElementById('modalExplanationText');
 
-    // Open Logic
+    // Click to Open
     document.querySelectorAll('.view-sol-btn').forEach(button => {
         button.addEventListener('click', function() {
             modalQuestion.innerText = this.getAttribute('data-question');
             modalExpl.innerText = this.getAttribute('data-explanation');
-            insightModal.show();
+            
+            // Standard Bootstrap way to show
+            var myModal = new bootstrap.Modal(modalEl);
+            myModal.show();
         });
     });
 
-    // Cleanup Logic: Prevents screen from staying gray/stuck
+    // ULTIMATE FIX: Force cleanup when closed
     modalEl.addEventListener('hidden.bs.modal', function () {
-        const backdrops = document.querySelectorAll('.modal-backdrop');
-        backdrops.forEach(b => b.remove());
+        // Remove all backdrop elements manually just in case
+        document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
+        // Reset body
         document.body.classList.remove('modal-open');
         document.body.style.overflow = '';
         document.body.style.paddingRight = '';
     });
-
-    // Search Logic
-    const searchInput = document.getElementById('librarySearch');
-    if (searchInput) {
-        searchInput.addEventListener('input', function(e) {
-            const term = e.target.value.toLowerCase();
-            document.querySelectorAll('.question-card').forEach(card => {
-                const text = card.querySelector('h6').innerText.toLowerCase();
-                card.classList.toggle('hidden-card', !text.includes(term));
-            });
-        });
-    }
 });
 </script>
 {% endblock %}
