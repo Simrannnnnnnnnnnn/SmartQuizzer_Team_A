@@ -1,4 +1,5 @@
-# 🚀 SMARTQUIZZER
+# SmartQuizzer 🚀 > (Font: Poppins Bold | Color: #FFB300 | Size: 60pt+)
+## Elevating Raw Data into Cognitive Intelligence > (Font: Poppins | Color: #FFB300)
 
 ### **Powered By**
 ![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB) ![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white) ![Flask](https://img.shields.io/badge/Flask-000000?style=for-the-badge&logo=flask&logoColor=white) ![Groq](https://img.shields.io/badge/Groq_Cloud-F34F29?style=for-the-badge) 
@@ -10,7 +11,7 @@
 
 ---
 
-### 📑 Table of Contents
+
 ### 📑 Table of Contents
 
 * [🧠 Overview](#-overview)
