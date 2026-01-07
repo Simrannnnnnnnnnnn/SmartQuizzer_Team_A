@@ -20,12 +20,8 @@ class LLMClient:
     def generate_questions(self, content, count, quiz_format='mcq', source_type='text'):
         if not content: return []
         
-        # 1. Define source-specific instructions
         if source_type == 'image':
-            system_instruction = (
-                "You are an expert at interpreting messy OCR text from handwritten notes. "
-                "Fix typos contextually before generating questions."
-            )
+            system_instruction = "You are an expert at interpreting messy OCR text from handwritten notes. Fix typos contextually."
         elif source_type == 'topic':
             system_instruction = "The user provided a broad topic. Use your own internal expert knowledge."
         elif source_type == 'pdf':
@@ -33,7 +29,6 @@ class LLMClient:
         else:
             system_instruction = "Generate educational questions based on the provided study notes."
 
-        # 2. Define format instructions
         format_instruction = {
             'mcq': "Generate ONLY Multiple Choice Questions (4 options: A, B, C, D).",
             'tf': "Generate ONLY True/False questions (2 options: A: True, B: False).",
@@ -41,7 +36,6 @@ class LLMClient:
             'mixed': "Generate a variety of MCQ, True/False, and Short Answer questions."
         }
 
-        # 3. Build the final prompt
         prompt = f"""
         TASK: {format_instruction.get(quiz_format, format_instruction['mcq'])}
         SOURCE CONTENT: {content[:4000]}
@@ -59,7 +53,6 @@ class LLMClient:
           ]
         }}
         """
-        
         try:
             completion = self.client.chat.completions.create(
                 messages=[
@@ -75,22 +68,21 @@ class LLMClient:
             print(f"LLM Error: {e}")
             return []
 
-    # --- YEHA DEKHO: Ye class ke andar hona chahiye (4 spaces ka gap) ---
+    # --- UPDATED: Isme detailed_revision key add kar di hai ---
     def generate_study_material(self, content):
-        """Generates Shorthand Notes, Mnemonics, and Flashcards."""
+        """Generates Shorthand Notes, Detailed Revision, Mnemonics, and Flashcards."""
         prompt = f"""
         Analyze this content: {content}
-        You are a world-class tutor. Create a study bundle.
+        You are a world-class tutor. Create a comprehensive study bundle.
         Return ONLY a JSON object with this exact structure:
         {{
             "shorthand_notes": ["point 1", "point 2", "point 3", "point 4", "point 5"],
+            "detailed_revision": "A clear, professional paragraph (150-200 words) explaining the whole topic in detail.",
             "mnemonic_story": "A creative story or acronym to remember the main points",
             "flashcards": [
-                {{"front": "Question/Concept 1", "back": "Answer/Explanation 1"}},
-                {{"front": "Question/Concept 2", "back": "Answer/Explanation 2"}},
-                {{"front": "Question/Concept 3", "back": "Answer/Explanation 3"}},
-                {{"front": "Question/Concept 4", "back": "Answer/Explanation 4"}},
-                {{"front": "Question/Concept 5", "back": "Answer/Explanation 5"}}
+                {{"front": "Concept 1", "back": "Explanation 1"}},
+                {{"front": "Concept 2", "back": "Explanation 2"}},
+                {{"front": "Concept 3", "back": "Explanation 3"}}
             ]
         }}
         Do not include any text before or after the JSON.
@@ -103,12 +95,40 @@ class LLMClient:
                 temperature=0.7,
                 response_format={"type": "json_object"}
             )
+            # JSON load karke return karein
             return json.loads(response.choices[0].message.content)
             
         except Exception as e:
             print(f"Error in LLM Study Hub: {e}")
+            # Fallback data mein bhi sari keys honi chahiye taaki HTML crash na ho
             return {
-                "shorthand_notes": ["Could not generate notes. Please try again."],
+                "shorthand_notes": ["Note generation failed."],
+                "detailed_revision": "Detailed explanation is currently unavailable.",
                 "mnemonic_story": "Mnemonic generation failed.",
                 "flashcards": []
             }
+
+    def simplify_content(self, text):
+        """Simplifies complex text into a 'Explain Like I'm 10' format."""
+        if not text:
+            return "No text provided to simplify."
+
+        prompt = f"""
+        TASK: Explain the following concept like I am a 10-year-old child. 
+        Use simple analogies and keep it friendly.
+        
+        CONCEPT: {text}
+        
+        RESPONSE: Only the simplified explanation text.
+        """
+
+        try:
+            completion = self.client.chat.completions.create(
+                messages=[{"role": "user", "content": prompt}],
+                model="llama-3.3-70b-versatile",
+                temperature=0.8
+            )
+            return completion.choices[0].message.content
+        except Exception as e:
+            print(f"Simplification Error: {e}")
+            return "I tried to make it simpler, but my brain froze!"
