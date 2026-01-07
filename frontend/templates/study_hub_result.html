@@ -20,15 +20,38 @@
     <div class="row">
         <div class="col-lg-7">
             <div class="glass-card p-4 mb-4 border-top-gold shadow-sm">
-                <h4 class="fw-bold mb-4"><i class="fa-solid fa-file-lines text-warning me-2"></i>Shorthand Revision Notes</h4>
-                <ul class="list-group list-group-flush">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h4 class="fw-bold m-0"><i class="fa-solid fa-file-lines text-warning me-2"></i>Shorthand Revision Notes</h4>
+                    <small class="text-muted"><i class="fa-solid fa-mouse-pointer me-1"></i> Click notes to elaborate</small>
+                </div>
+                
+                <div class="list-group list-group-flush">
                     {% for note in data.shorthand_notes %}
-                    <li class="list-group-item bg-transparent border-0 d-flex align-items-start mb-2">
-                        <i class="fa-solid fa-circle-check text-success mt-1 me-3"></i>
-                        <span>{{ note }}</span>
-                    </li>
+                    <div class="list-group-item bg-transparent border-0 mb-3 px-0">
+                        <div class="note-interactive-card p-3 rounded-4 border shadow-sm transition-all" style="background: #fff; cursor: pointer;">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div class="d-flex align-items-start flex-grow-1" onclick="toggleDetail(this)">
+                                    <i class="fa-solid fa-circle-check text-success mt-1 me-3"></i>
+                                    <span class="fs-6 fw-bold note-summary">{{ note }}</span>
+                                </div>
+                                <button class="btn btn-sm btn-outline-secondary rounded-pill px-3 ms-2 flex-shrink-0" 
+                                        onclick="explainLike10(this, '{{ note|e }}')">
+                                    <i class="fa-solid fa-child me-1"></i> ELI10
+                                </button>
+                            </div>
+                            
+                            <div class="note-detail-content d-none mt-3 pt-3 border-top animate__animated animate__fadeIn">
+                                <div class="p-3 bg-light rounded-3">
+                                    <p class="mb-0 text-dark" style="font-size: 0.95rem; line-height: 1.6;">
+                                        {{ data.detailed_revision[:200] }}... <br>
+                                        <small class="text-primary fw-bold mt-2 d-block">Full context mapped from AI Summary.</small>
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                     {% endfor %}
-                </ul>
+                </div>
             </div>
 
             <div class="glass-card p-4 shadow-sm mb-4" style="background: #FFFDF5; border-left: 6px solid #FFB300;">
@@ -38,15 +61,19 @@
                 </div>
             </div>
             
-            <div class="glass-card p-4 shadow-sm border-0" style="background: linear-gradient(135deg, #fdfbfb 0%, #ebedee 100%);">
-                <h5 class="fw-bold mb-3">💡 Pro Study Tips</h5>
-                <div class="row">
-                    <div class="col-md-6 mb-2">
-                        <small class="text-muted d-block"><strong>Pomodoro:</strong> Study for 25 mins, rest for 5.</small>
+            <div class="glass-card p-4 shadow-sm border-0 mb-4 bg-primary text-white">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h5 class="fw-bold mb-1">🚀 Ready for a test?</h5>
+                        <p class="small mb-0 opacity-75">Generate a quiz based on these notes now.</p>
                     </div>
-                    <div class="col-md-6 mb-2">
-                        <small class="text-muted d-block"><strong>Feynman Technique:</strong> Explain this topic to a friend.</small>
-                    </div>
+                    <form action="{{ url_for('routes.handle_generation') }}" method="POST">
+                        <input type="hidden" name="source_type" value="text">
+                        <input type="hidden" name="raw_text" value="{{ data.detailed_revision }}">
+                        <input type="hidden" name="count" value="5">
+                        <input type="hidden" name="quiz_goal" value="quiz">
+                        <button type="submit" class="btn btn-light rounded-pill fw-bold">Start Quiz</button>
+                    </form>
                 </div>
             </div>
         </div>
@@ -83,21 +110,21 @@
                     <div class="roadmap-item">
                         <div class="step-num shadow-sm">1</div>
                         <h6 class="fw-bold mt-3">Review Notes</h6>
-                        <p class="small text-muted">Read the shorthand notes once now and once before bed.</p>
+                        <p class="small text-muted">Read shorthand notes & expand for details.</p>
                     </div>
                     <div class="roadmap-arrow d-none d-lg-block"><i class="fa-solid fa-chevron-right"></i></div>
                     
                     <div class="roadmap-item">
                         <div class="step-num shadow-sm bg-success">2</div>
                         <h6 class="fw-bold mt-3">Active Recall</h6>
-                        <p class="small text-muted">Go through all flashcards until you get 100% correct.</p>
+                        <p class="small text-muted">Go through all flashcards until mastered.</p>
                     </div>
                     <div class="roadmap-arrow d-none d-lg-block"><i class="fa-solid fa-chevron-right"></i></div>
 
                     <div class="roadmap-item">
                         <div class="step-num shadow-sm bg-primary">3</div>
                         <h6 class="fw-bold mt-3">Mastery Test</h6>
-                        <p class="small text-muted">Generate a quiz on this topic to verify your knowledge.</p>
+                        <p class="small text-muted">Generate a quiz to verify your knowledge.</p>
                     </div>
                 </div>
             </div>
@@ -108,42 +135,58 @@
 <style>
     :root { --primary-gold: #FFB300; }
     .border-top-gold { border-top: 6px solid var(--primary-gold) !important; }
+    .note-interactive-card:hover { border-color: var(--primary-gold) !important; transform: translateX(5px); }
+    .transition-all { transition: all 0.3s ease; }
     
-    /* Roadmap Styling */
+    /* Existing Flashcard & Roadmap Styles */
     .roadmap-item { width: 250px; text-align: center; }
-    .step-num { 
-        width: 50px; height: 50px; line-height: 50px; 
-        background: var(--primary-gold); color: white; 
-        border-radius: 50%; margin: 0 auto; font-weight: bold; font-size: 1.2rem;
-    }
+    .step-num { width: 50px; height: 50px; line-height: 50px; background: var(--primary-gold); color: white; border-radius: 50%; margin: 0 auto; font-weight: bold; font-size: 1.2rem; }
     .roadmap-arrow { font-size: 1.5rem; color: #dee2e6; }
-
-    /* Flashcard Styling */
     .flashcard { perspective: 1000px; height: 250px; cursor: pointer; }
-    .flashcard-inner {
-        position: relative; width: 100%; height: 100%;
-        text-align: center; transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
-        transform-style: preserve-3d;
-    }
+    .flashcard-inner { position: relative; width: 100%; height: 100%; text-align: center; transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1); transform-style: preserve-3d; }
     .flashcard.flipped .flashcard-inner { transform: rotateY(180deg); }
-    .flashcard-front, .flashcard-back {
-        position: absolute; width: 100%; height: 100%;
-        backface-visibility: hidden; border-radius: 25px;
-        box-shadow: 0 10px 20px rgba(0,0,0,0.05);
-    }
+    .flashcard-front, .flashcard-back { position: absolute; width: 100%; height: 100%; backface-visibility: hidden; border-radius: 25px; box-shadow: 0 10px 20px rgba(0,0,0,0.05); }
     .flashcard-front { background: #ffffff; color: #333; display: flex; align-items: center; justify-content: center; border: 1px solid #eee; }
     .flashcard-back { background: linear-gradient(135deg, #FFB300, #FFD700); color: white; transform: rotateY(180deg); }
-
-    /* Custom Scrollbar for Flashcards */
     .custom-scrollbar::-webkit-scrollbar { width: 6px; }
     .custom-scrollbar::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 10px; }
     .custom-scrollbar::-webkit-scrollbar-thumb { background: #FFB300; border-radius: 10px; }
-
     .glass-card { background: rgba(255, 255, 255, 0.95); border-radius: 25px; }
-    
-    @media print {
-        .btn, .roadmap-arrow, .text-muted { display: none !important; }
-        .flashcard-back { position: relative !important; transform: none !important; color: black !important; background: #f9f9f9 !important; border: 1px solid #ddd; margin-top: 10px; }
-    }
 </style>
+
+<script>
+    // Toggle details on left side click
+    function toggleDetail(element) {
+        const detailDiv = element.closest('.note-interactive-card').querySelector('.note-detail-content');
+        detailDiv.classList.toggle('d-none');
+    }
+
+    // ELI10 Logic
+    async function explainLike10(btn, text) {
+        // Event bubble na ho isliye stop propagation
+        event.stopPropagation();
+        
+        const detailDiv = btn.closest('.note-interactive-card').querySelector('.note-detail-content');
+        detailDiv.classList.remove('d-none');
+        detailDiv.innerHTML = `<div class="p-3 bg-light rounded-3">
+                                <div class="spinner-border spinner-border-sm text-warning me-2"></div>
+                                <small>👦 Explaining like you're 10...</small>
+                               </div>`;
+        
+        try {
+            const response = await fetch('/simplify', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ explanation: text })
+            });
+            const result = await response.json();
+            detailDiv.innerHTML = `<div class="p-3 bg-info bg-opacity-10 rounded-3 border-start border-info border-4">
+                                    <strong class="d-block mb-1">👦 Simple Version:</strong>
+                                    <p class="mb-0 small text-dark">${result.simplified}</p>
+                                   </div>`;
+        } catch (e) {
+            detailDiv.innerHTML = `<div class="p-3 bg-danger bg-opacity-10 text-danger rounded-3">Error simplifying text.</div>`;
+        }
+    }
+</script>
 {% endblock %}
