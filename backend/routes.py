@@ -422,49 +422,48 @@ def library():
         except:
             q.options = {}
     return render_template('library.html', questions=questions)
-
+    
 @routes_bp.route('/download_report/<int:res_id>')
 @login_required
 def download_report(res_id):
-    # Fetch result from SQLAlchemy 
-    result = QuizResult.query.get_or_404(res_id)
-    
-    # Check if result belongs to current user
-    if result.user_id != current_user.id:
-        flash("Unauthorized access.", "danger")
+    try:
+        # 1. Fetch result from SQLAlchemy (not MongoDB)
+        result = QuizResult.query.get_or_404(res_id)
+        
+        # 2. Security Check
+        if result.user_id != current_user.id:
+            flash("Unauthorized access.", "danger")
+            return redirect(url_for('routes.dashboard'))
+
+        # 3. Create a Byte stream for the PDF (Saves RAM on Render)
+        buffer = io.BytesIO()
+        p = canvas.Canvas(buffer, pagesize=letter)
+        
+        # 4. Draw PDF Content using ReportLab
+        p.setFont("Helvetica-Bold", 20)
+        p.drawString(100, 750, "Quiz Performance Report")
+        
+        p.setFont("Helvetica", 12)
+        p.drawString(100, 720, f"User: {current_user.username}")
+        p.drawString(100, 700, f"Date: {result.date_taken.strftime('%Y-%m-%d %H:%M')}")
+        p.drawString(100, 680, f"Score: {result.score} / {result.total_questions}")
+        
+        # Calculate Accuracy
+        accuracy = (result.score / result.total_questions * 100) if result.total_questions > 0 else 0
+        p.drawString(100, 660, f"Accuracy: {int(accuracy)}%")
+
+        p.showPage()
+        p.save()
+
+        # 5. Send the file back to the browser
+        buffer.seek(0)
+        return send_file(
+            buffer,
+            mimetype='application/pdf',
+            as_attachment=True,
+            download_name=f"Report_{result.id}.pdf"
+        )
+    except Exception as e:
+        print(f"PDF Error: {e}")
+        flash("Could not generate PDF.", "danger")
         return redirect(url_for('routes.dashboard'))
-
-    # 1. Create a Byte stream for the PDF
-    buffer = io.BytesIO()
-    p = canvas.Canvas(buffer, pagesize=letter)
-    
-    # 2. Draw Report Content
-    p.setFont("Helvetica-Bold", 24)
-    p.setFillColorRGB(0.83, 0.63, 0.09) # Gold color
-    p.drawCentredString(300, 750, "AI Quiz Generator Report")
-    
-    p.setFont("Helvetica", 14)
-    p.setFillColorRGB(0, 0, 0)
-    p.drawString(100, 700, f"Username: {current_user.username}")
-    p.drawString(100, 680, f"Date: {result.date_taken.strftime('%Y-%m-%d %H:%M')}")
-    
-    p.setFont("Helvetica-Bold", 16)
-    p.drawString(100, 640, "Quiz Performance")
-    
-    p.setFont("Helvetica", 14)
-    percentage = (result.score / result.total_questions) * 100 if result.total_questions > 0 else 0
-    p.drawString(100, 620, f"Final Score: {result.score} / {result.total_questions}")
-    p.drawString(100, 600, f"Success Rate: {int(percentage)}%")
-
-    # Close the PDF object cleanly
-    p.showPage()
-    p.save()
-
-    # 3. Prepare for download
-    buffer.seek(0)
-    return send_file(
-        buffer,
-        mimetype='application/pdf',
-        as_attachment=True,
-        download_name=f"Quiz_Report_{res_id}.pdf"
-    )
