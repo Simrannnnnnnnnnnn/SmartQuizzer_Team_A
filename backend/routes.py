@@ -7,8 +7,9 @@ from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
 from dotenv import load_dotenv
 from groq import Groq
+from reportlab.lib.pagesizes import letter
+from reportlab.pdfgen import canvas
 
-# Model imports - Adjust paths if your folder structure is different
 from backend.models import User, Question, QuizResult, TopicMastery, MistakeBank, Bookmark, db
 from backend.services import extract_text_from_pdf
 from backend.llm_client import LLMClient
@@ -16,16 +17,13 @@ from backend.llm_client import LLMClient
 load_dotenv()
 routes_bp = Blueprint('routes', __name__)
 
-# Initialize Clients
-# We use the raw Groq client for Vision and the custom LLMClient for text generation
+n
 client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 llm = LLMClient(api_key=os.getenv("GROQ_API_KEY"))
 
-# ==========================================
-# HELPER: VISION OCR (Saves 800MB RAM)
-# ==========================================
-from PIL import Image  # Add this at the top of routes.py
-import io
+
+from PIL import Image  
+
 def extract_text_via_groq_vision(file_storage):
 
     """Sends image to Groq Vision so the server doesn't crash from local OCR."""
@@ -35,14 +33,14 @@ def extract_text_via_groq_vision(file_storage):
         file_storage.seek(0)
         img = Image.open(file_storage)
 
-        # 2. Image ko Resize aur Compress karein (RAM bachane ke liye)
+        
         img.thumbnail((1600, 1600)) 
         img_byte_arr = io.BytesIO()
-        img = img.convert("RGB") # PNG to JPEG conversion safety
+        img = img.convert("RGB") 
         img.save(img_byte_arr, format='JPEG', quality=85) 
         image_bytes = img_byte_arr.getvalue()
 
-        # 3. Base64 Encoding
+       
         encoded_image = base64.b64encode(image_bytes).decode('utf-8')
         
        
@@ -135,12 +133,13 @@ def study_hub():
             flash("Please provide content to learn!", "warning")
             return redirect(url_for('routes.study_hub'))
 
-        # llm (LLMClient instance) ka use karein
+       
         study_bundle = llm.generate_study_material(content)
         return render_template('study_hub_result.html', data=study_bundle)
     
     return render_template('study_hub.html')
-# --- NEW: Simplify Content (ELI10 Logic) ---
+
+    
     def simplify_content(self, text):
         """Simplifies complex text into a 'Explain Like I'm 10' format."""
         if not text:
@@ -159,7 +158,7 @@ def study_hub():
             completion = self.client.chat.completions.create(
                 messages=[{"role": "user", "content": prompt}],
                 model="llama-3.3-70b-versatile",
-                temperature=0.8 # Thoda creative temperature rakha hai analogies ke liye
+                temperature=0.8 
             )
             return completion.choices[0].message.content
         except Exception as e:
@@ -423,43 +422,48 @@ def library():
         except:
             q.options = {}
     return render_template('library.html', questions=questions)
-from flask import send_file # Make sure this is imported
 
-@routes_bp.route('/download_report/<res_id>')
+@routes_bp.route('/download_report/<int:res_id>')
+@login_required
 def download_report(res_id):
-    if not is_authenticated(): 
-        return redirect(url_for('routes.login'))
+    # Fetch result from SQLAlchemy 
+    result = QuizResult.query.get_or_404(res_id)
     
-    db = get_db()
-    result = db.results.find_one({"_id": ObjectId(res_id)})
-    
-    if not result:
-        flash("Result not found.", "danger")
+    # Check if result belongs to current user
+    if result.user_id != current_user.id:
+        flash("Unauthorized access.", "danger")
         return redirect(url_for('routes.dashboard'))
 
-    # 1. Create PDF
-    pdf = FPDF()
-    pdf.add_page()
+    # 1. Create a Byte stream for the PDF
+    buffer = io.BytesIO()
+    p = canvas.Canvas(buffer, pagesize=letter)
     
-    # Header
-    pdf.set_font("Arial", 'B', 24)
-    pdf.set_text_color(212, 160, 23) # Gold color
-    pdf.cell(200, 20, "AI Quiz Generator Report", ln=True, align='C')
+    # 2. Draw Report Content
+    p.setFont("Helvetica-Bold", 24)
+    p.setFillColorRGB(0.83, 0.63, 0.09) # Gold color
+    p.drawCentredString(300, 750, "AI Quiz Generator Report")
     
-    # Body logic (Simplified for brevity)
-    pdf.set_font("Arial", '', 14)
-    pdf.set_text_color(0, 0, 0)
-    pdf.ln(10)
-    pdf.cell(200, 10, f"Username: {session.get('username')}", ln=True)
-    pdf.cell(200, 10, f"Date: {result['date'].strftime('%Y-%m-%d %H:%M')}", ln=True)
+    p.setFont("Helvetica", 14)
+    p.setFillColorRGB(0, 0, 0)
+    p.drawString(100, 700, f"Username: {current_user.username}")
+    p.drawString(100, 680, f"Date: {result.date_taken.strftime('%Y-%m-%d %H:%M')}")
     
-    # 2. OUTPUT AS BYTES (The Critical Part)
-    # Using 'dest=S' returns the PDF as a byte string
-    pdf_output = pdf.output(dest='S')
+    p.setFont("Helvetica-Bold", 16)
+    p.drawString(100, 640, "Quiz Performance")
     
-    # Convert to a BytesIO object so Flask can read it as a file
+    p.setFont("Helvetica", 14)
+    percentage = (result.score / result.total_questions) * 100 if result.total_questions > 0 else 0
+    p.drawString(100, 620, f"Final Score: {result.score} / {result.total_questions}")
+    p.drawString(100, 600, f"Success Rate: {int(percentage)}%")
+
+    # Close the PDF object cleanly
+    p.showPage()
+    p.save()
+
+    # 3. Prepare for download
+    buffer.seek(0)
     return send_file(
-        io.BytesIO(pdf_output),
+        buffer,
         mimetype='application/pdf',
         as_attachment=True,
         download_name=f"Quiz_Report_{res_id}.pdf"
