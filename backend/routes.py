@@ -423,7 +423,44 @@ def library():
         except:
             q.options = {}
     return render_template('library.html', questions=questions)
-@routes_bp.route('/download_report/<int:res_id>')
+from flask import send_file # Make sure this is imported
+
+@routes_bp.route('/download_report/<res_id>')
 def download_report(res_id):
-    # Abhi ke liye sirf ek message return karwa dete hain testing ke liye
-    return f"Downloading report for result ID: {res_id}"
+    if not is_authenticated(): 
+        return redirect(url_for('routes.login'))
+    
+    db = get_db()
+    result = db.results.find_one({"_id": ObjectId(res_id)})
+    
+    if not result:
+        flash("Result not found.", "danger")
+        return redirect(url_for('routes.dashboard'))
+
+    # 1. Create PDF
+    pdf = FPDF()
+    pdf.add_page()
+    
+    # Header
+    pdf.set_font("Arial", 'B', 24)
+    pdf.set_text_color(212, 160, 23) # Gold color
+    pdf.cell(200, 20, "AI Quiz Generator Report", ln=True, align='C')
+    
+    # Body logic (Simplified for brevity)
+    pdf.set_font("Arial", '', 14)
+    pdf.set_text_color(0, 0, 0)
+    pdf.ln(10)
+    pdf.cell(200, 10, f"Username: {session.get('username')}", ln=True)
+    pdf.cell(200, 10, f"Date: {result['date'].strftime('%Y-%m-%d %H:%M')}", ln=True)
+    
+    # 2. OUTPUT AS BYTES (The Critical Part)
+    # Using 'dest=S' returns the PDF as a byte string
+    pdf_output = pdf.output(dest='S')
+    
+    # Convert to a BytesIO object so Flask can read it as a file
+    return send_file(
+        io.BytesIO(pdf_output),
+        mimetype='application/pdf',
+        as_attachment=True,
+        download_name=f"Quiz_Report_{res_id}.pdf"
+    )
