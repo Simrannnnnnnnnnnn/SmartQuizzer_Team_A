@@ -25,38 +25,47 @@ llm = LLMClient(api_key=os.getenv("GROQ_API_KEY"))
 # HELPER: VISION OCR (Fixed Model)
 # ==========================================
 def extract_text_via_groq_vision(file_storage):
-    if not file_storage:
-        return ""
+    if not file_storage: return ""
     try:
         file_storage.seek(0)
-        img = Image.open(file_storage)
-        img.thumbnail((1600, 1600)) 
-        img_byte_arr = io.BytesIO()
-        img = img.convert("RGB")
-        img.save(img_byte_arr, format='JPEG', quality=85) 
-        image_bytes = img_byte_arr.getvalue()
-        encoded_image = base64.b64encode(image_bytes).decode('utf-8')
+        img = Image.open(file_storage).convert("RGB")
+        img.thumbnail((1200, 1200)) 
         
-        # CHANGED: Using the Compound model which supports Vision
-        response = client.chat.completions.create(
-            model="groq/compound", 
-            messages=[
-                {
+        img_byte_arr = io.BytesIO()
+        img.save(img_byte_arr, format='JPEG', quality=80)
+        encoded_image = base64.b64encode(img_byte_arr.getvalue()).decode('utf-8')
+
+        # Try Llama 3.2 Vision first (Standard Vision Model)
+        try:
+            response = client.chat.completions.create(
+                model="llama-3.2-11b-vision-preview", 
+                messages=[{
                     "role": "user",
                     "content": [
-                        {"type": "text", "text": "Please extract all text from this image. Format it clearly for study notes."},
-                        {
-                            "type": "image_url",
-                            "image_url": {"url": f"data:image/jpeg;base64,{encoded_image}"}
-                        }
+                        {"type": "text", "text": "Extract all text from this image clearly."},
+                        {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{encoded_image}"}}
                     ]
-                }
-            ]
-        )
-        return response.choices[0].message.content
+                }]
+            )
+            return response.choices[0].message.content
+        except Exception:
+            # Fallback to Compound if Llama Vision is not available
+            print("Llama Vision failed, switching to Compound...")
+            response = client.chat.completions.create(
+                model="groq/compound", 
+                messages=[{
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": "Extract all text from this image clearly."},
+                        {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{encoded_image}"}}
+                    ]
+                }]
+            )
+            return response.choices[0].message.content
+            
     except Exception as e:
-        print(f"Vision API Error: {e}")
-        return ""
+        print(f"Vision Error: {e}")
+        return "OCR Error: Could not read image."
 # ==========================================
 # AUTHENTICATION
 # ==========================================
@@ -155,8 +164,11 @@ def dashboard():
 @login_required
 def handle_generation():
     source_type = request.form.get('source_type')
+    # NAYA: Form se format aur goal lena
+    quiz_format = request.form.get('quiz_format', 'mcq') 
     quiz_goal = request.form.get('quiz_goal', 'revision').lower().strip()
     count = int(request.form.get('count', 5))
+    
     content, mastery_label = "", ""
 
     try:
@@ -164,48 +176,67 @@ def handle_generation():
             content = extract_text_from_pdf(request.files.get('pdf_file'))
             mastery_label = 'PDF Review'
         elif source_type == 'image':
+            # Note: Ensure your Vision model is active in Groq
             content = extract_text_via_groq_vision(request.files.get('image_file'))
             mastery_label = 'Image Review'
         elif source_type == 'text':
             content = request.form.get('raw_text')
             mastery_label = 'Text Review'
         elif source_type == 'topic':
-            content = f"Topic focus: {request.form.get('topic_name')}"
+            content = request.form.get('topic_name')
             mastery_label = 'Topic Review'
 
         if not content:
-            flash("No content found.", "warning")
+            flash("No content found to generate questions.", "warning")
             return redirect(url_for('routes.dashboard'))
 
-        # Inside handle_generation route:
-        raw_qs = llm.generate_questions(content, count, source_type=source_type)
+        # UPDATED: Ab llm_client ko quiz_format bhi bhej rahe hain
+        raw_qs = llm.generate_questions(content, count, quiz_format=quiz_format, source_type=source_type)
+        
+        if not raw_qs:
+            flash("AI could not generate questions. Try different content.", "danger")
+            return redirect(url_for('routes.dashboard'))
+
         q_ids = []
         for q in raw_qs:
             new_q = Question(
                 question_text=q.get('question_text'),
+                # Options agar empty hain (Theory) toh empty dict save hoga
                 options_json=json.dumps(q.get('options', {})),
                 correct_answer=q.get('correct_answer'),
                 explanation=q.get('explanation'),
                 difficulty_level=q.get('difficulty', 'Medium'),
                 user_id=current_user.id
             )
+            # Theory ke liye ideal answer extra info mein dal sakte hain
+            if quiz_format == 'theory':
+                 new_q.explanation = f"Ideal Answer: {q.get('ideal_answer')} \n\n {q.get('explanation')}"
+
             db.session.add(new_q)
             db.session.flush()
             q_ids.append(new_q.id)
         
         db.session.commit()
+
         session.update({
-            'active_questions': q_ids, 'is_mistake_review': False,
-            'current_idx': 0, 'score': 0, 'quiz_topic': mastery_label,
-            'quiz_goal': quiz_goal, 'user_answers': [], 
-            'time_limit': (count * 30), 'start_time': time.time()
+            'active_questions': q_ids, 
+            'is_mistake_review': False,
+            'current_idx': 0, 
+            'score': 0, 
+            'quiz_topic': mastery_label,
+            'quiz_format': quiz_format,
+            'quiz_goal': quiz_goal, 
+            'user_answers': [], 
+            'time_limit': (count * 60 if quiz_format == 'theory' else count * 30), # Theory ko zyada time
+            'start_time': time.time()
         })
         return redirect(url_for('routes.quiz_page', q_id=q_ids[0]))
+
     except Exception as e:
         db.session.rollback()
-        flash(f"Error: {str(e)}", "danger")
+        print(f"Generation Error: {e}")
+        flash("Something went wrong during generation.", "danger")
         return redirect(url_for('routes.dashboard'))
-
 # ==========================================
 # QUIZ EXECUTION
 # ==========================================
@@ -230,29 +261,73 @@ def quiz_page(q_id):
 @routes_bp.route('/submit_answer/<int:q_id>', methods=['POST'])
 @login_required
 def submit_answer(q_id):
-    question = MistakeBank.query.get_or_404(q_id) if session.get('is_mistake_review') else Question.query.get_or_404(q_id)
+    
+    is_mistake = session.get('is_mistake_review', False)
+    question = MistakeBank.query.get_or_404(q_id) if is_mistake else Question.query.get_or_404(q_id)
+    
+   
     user_ans = request.form.get('answer', '').strip()
-    is_correct = (user_ans.lower() == str(question.correct_answer).lower())
+    
+  
+    try:
+        options = json.loads(question.options_json) if isinstance(question.options_json, str) else question.options_json
+    except:
+        options = {}
 
-    if 'user_answers' not in session: session['user_answers'] = []
-    session['user_answers'].append({'question': question.question_text, 'is_correct': is_correct})
+   
+    if not options or len(options) == 0:
+        
+        is_correct = len(user_ans) >= 5 
+        
+    else:
+        
+        is_correct = (user_ans.lower() == str(question.correct_answer).lower())
+
+   
+    if 'user_answers' not in session:
+        session['user_answers'] = []
+    
+    
+    temp_answers = session['user_answers']
+    temp_answers.append({
+        'question': question.question_text,
+        'user_ans': user_ans,
+        'correct_ans': question.correct_answer,
+        'explanation': question.explanation,
+        'is_correct': is_correct
+    })
+    session['user_answers'] = temp_answers
 
     if is_correct:
         session['score'] = session.get('score', 0) + 1
-        if session.get('is_mistake_review'): db.session.delete(question)
+        
+        if is_mistake:
+            db.session.delete(question)
     else:
-        if not session.get('is_mistake_review'):
-            new_mistake = MistakeBank(user_id=current_user.id, question_text=question.question_text, 
-                                      options_json=question.options_json, correct_answer=question.correct_answer,
-                                      explanation=question.explanation, topic=session.get('quiz_topic'))
-            db.session.add(new_mistake)
+       
+        if not is_mistake:
+            already_exists = MistakeBank.query.filter_by(user_id=current_user.id, question_text=question.question_text).first()
+            if not already_exists:
+                new_mistake = MistakeBank(
+                    user_id=current_user.id,
+                    question_text=question.question_text,
+                    options_json=json.dumps(options),
+                    correct_answer=question.correct_answer,
+                    explanation=question.explanation,
+                    topic=session.get('quiz_topic', 'General')
+                )
+                db.session.add(new_mistake)
 
     db.session.commit()
+
+    # 7. Next Question ya Results?
     session['current_idx'] = session.get('current_idx', 0) + 1
     q_list = session.get('active_questions', [])
+
     if session['current_idx'] < len(q_list):
         return redirect(url_for('routes.quiz_page', q_id=q_list[session['current_idx']]))
-    return redirect(url_for('routes.results'))
+    else:
+        return redirect(url_for('routes.results'))
 
 @routes_bp.route('/review_mistakes') # This name must match url_for('routes.review_mistakes')
 @login_required
