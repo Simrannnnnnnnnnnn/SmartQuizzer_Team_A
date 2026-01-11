@@ -37,14 +37,14 @@ def extract_text_via_groq_vision(file_storage):
         image_bytes = img_byte_arr.getvalue()
         encoded_image = base64.b64encode(image_bytes).decode('utf-8')
         
-        # UPDATED: Using the active 90b vision model
+        # CHANGED: Using the stable production model name
         response = client.chat.completions.create(
-            model="llama-3.2-90b-vision-preview", 
+            model="llama-3.2-90b-vision-instruct", 
             messages=[
                 {
                     "role": "user",
                     "content": [
-                        {"type": "text", "text": "Extract all text from this image accurately. Maintain clear formatting for notes."},
+                        {"type": "text", "text": "Please extract all text from this image. Format it clearly for study notes."},
                         {
                             "type": "image_url",
                             "image_url": {"url": f"data:image/jpeg;base64,{encoded_image}"}
