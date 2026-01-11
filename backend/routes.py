@@ -37,9 +37,9 @@ def extract_text_via_groq_vision(file_storage):
         image_bytes = img_byte_arr.getvalue()
         encoded_image = base64.b64encode(image_bytes).decode('utf-8')
         
-        # CHANGED: Using the stable production model name
+        # CHANGED: Using the Compound model which supports Vision
         response = client.chat.completions.create(
-            model="llama-3.2-90b-vision-instruct", 
+            model="groq/compound", 
             messages=[
                 {
                     "role": "user",
@@ -177,7 +177,8 @@ def handle_generation():
             flash("No content found.", "warning")
             return redirect(url_for('routes.dashboard'))
 
-        raw_qs = llm.generate_questions(content, count)
+        # Inside handle_generation route:
+        raw_qs = llm.generate_questions(content, count, source_type=source_type)
         q_ids = []
         for q in raw_qs:
             new_q = Question(
