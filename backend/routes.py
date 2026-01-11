@@ -255,6 +255,29 @@ def submit_answer(q_id):
         return redirect(url_for('routes.quiz_page', q_id=q_list[session['current_idx']]))
     return redirect(url_for('routes.results'))
 
+@routes_bp.route('/review_mistakes') # This name must match url_for('routes.review_mistakes')
+@login_required
+def review_mistakes():
+    now = datetime.utcnow()
+    mistakes = MistakeBank.query.filter(MistakeBank.user_id == current_user.id, MistakeBank.next_review <= now).all()
+    
+    if not mistakes:
+        mistakes = MistakeBank.query.filter_by(user_id=current_user.id).limit(10).all()
+    
+    if not mistakes:
+        flash("No mistakes to review yet! Keep practicing.", "info")
+        return redirect(url_for('routes.dashboard'))
+    
+    m_ids = [m.id for m in mistakes]
+    session.update({
+        'active_questions': m_ids, 
+        'is_mistake_review': True, 
+        'current_idx': 0, 
+        'score': 0, 
+        'quiz_topic': 'Mistake Review'
+    })
+    return redirect(url_for('routes.quiz_page', q_id=m_ids[0]))
+    
 @routes_bp.route('/results')
 @login_required
 def results():
