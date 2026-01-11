@@ -7,9 +7,9 @@ from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
 from dotenv import load_dotenv
 from groq import Groq
-from reportlab.lib.pagesizes import letter
-from reportlab.pdfgen import canvas
+from PIL import Image
 
+# Model imports
 from backend.models import User, Question, QuizResult, TopicMastery, MistakeBank, Bookmark, db
 from backend.services import extract_text_from_pdf
 from backend.llm_client import LLMClient
@@ -17,41 +17,35 @@ from backend.llm_client import LLMClient
 load_dotenv()
 routes_bp = Blueprint('routes', __name__)
 
-n
+# Initialize Clients
 client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 llm = LLMClient(api_key=os.getenv("GROQ_API_KEY"))
 
-
-from PIL import Image  
+# ==========================================
+# HELPER: VISION OCR (Fixed Model)
+# ==========================================
 
 def extract_text_via_groq_vision(file_storage):
-
-    """Sends image to Groq Vision so the server doesn't crash from local OCR."""
     if not file_storage:
         return ""
     try:
         file_storage.seek(0)
         img = Image.open(file_storage)
-
-        
         img.thumbnail((1600, 1600)) 
         img_byte_arr = io.BytesIO()
-        img = img.convert("RGB") 
+        img = img.convert("RGB")
         img.save(img_byte_arr, format='JPEG', quality=85) 
         image_bytes = img_byte_arr.getvalue()
-
-       
         encoded_image = base64.b64encode(image_bytes).decode('utf-8')
         
-       
-        
+        # CHANGED: Use the stable Llama 3.2 Vision model
         response = client.chat.completions.create(
-            model="meta-llama/llama-4-scout-17b-16e-instruct",
+            model="llama-3.2-11b-vision-preview",
             messages=[
                 {
                     "role": "user",
                     "content": [
-                        {"type": "text", "text": "Extract all text from this image accurately. If it's a quiz or notes, keep the formatting clear."},
+                        {"type": "text", "text": "Extract all text from this image accurately. Maintain clear formatting."},
                         {
                             "type": "image_url",
                             "image_url": {"url": f"data:image/jpeg;base64,{encoded_image}"}
@@ -110,9 +104,8 @@ def logout():
     return redirect(url_for('routes.login'))
 
 # ==========================================
-# DASHBOARD
+# STUDY HUB
 # ==========================================
-
 
 @routes_bp.route('/study-hub', methods=['GET', 'POST'])
 @login_required
@@ -120,8 +113,6 @@ def study_hub():
     if request.method == 'POST':
         source_type = request.form.get('source_type')
         content = ""
-        
-        # Dashboard jaisa same extraction logic yahan bhi use karein
         if source_type == 'pdf':
             content = extract_text_from_pdf(request.files.get('pdf_file'))
         elif source_type == 'text':
@@ -133,37 +124,13 @@ def study_hub():
             flash("Please provide content to learn!", "warning")
             return redirect(url_for('routes.study_hub'))
 
-       
         study_bundle = llm.generate_study_material(content)
         return render_template('study_hub_result.html', data=study_bundle)
-    
     return render_template('study_hub.html')
 
-    
-    def simplify_content(self, text):
-        """Simplifies complex text into a 'Explain Like I'm 10' format."""
-        if not text:
-            return "No text provided to simplify."
-
-        prompt = f"""
-        TASK: Explain the following concept like I am a 10-year-old child. 
-        Use simple analogies, avoid jargon, and keep it very engaging and friendly.
-        
-        CONCEPT: {text}
-        
-        RESPONSE: Provide only the simplified explanation without any intro like 'Sure' or 'Here is'.
-        """
-
-        try:
-            completion = self.client.chat.completions.create(
-                messages=[{"role": "user", "content": prompt}],
-                model="llama-3.3-70b-versatile",
-                temperature=0.8 
-            )
-            return completion.choices[0].message.content
-        except Exception as e:
-            print(f"Simplification Error: {e}")
-            return "I tried to make it simpler, but my brain froze! Please try again."       
+# ==========================================
+# DASHBOARD & RESULTS
+# ==========================================
 
 @routes_bp.route('/dashboard')
 @login_required
@@ -173,7 +140,6 @@ def dashboard():
         TopicMastery.user_id == current_user.id,
         TopicMastery.topic_name.in_(allowed_topics)
     ).all()
-    
     mistake_count = MistakeBank.query.filter_by(user_id=current_user.id).count()
     results_list = QuizResult.query.filter_by(user_id=current_user.id).order_by(QuizResult.date_taken.desc()).all()
     correct_total = sum([r.score for r in results_list]) if results_list else 0
@@ -186,10 +152,6 @@ def dashboard():
                            topic_mastery=topic_mastery,
                            mistake_count=mistake_count,
                            streak=current_user.streak_count or 0)
-
-# ==========================================
-# GENERATION ENGINE (Optimized)
-# ==========================================
 
 @routes_bp.route('/handle_generation', methods=['POST'])
 @login_required
@@ -204,7 +166,6 @@ def handle_generation():
             content = extract_text_from_pdf(request.files.get('pdf_file'))
             mastery_label = 'PDF Review'
         elif source_type == 'image':
-            # Use the RAM-friendly Vision API instead of local OCR
             content = extract_text_via_groq_vision(request.files.get('image_file'))
             mastery_label = 'Image Review'
         elif source_type == 'text':
@@ -215,7 +176,7 @@ def handle_generation():
             mastery_label = 'Topic Review'
 
         if not content:
-            flash("No content found to generate questions.", "warning")
+            flash("No content found.", "warning")
             return redirect(url_for('routes.dashboard'))
 
         raw_qs = llm.generate_questions(content, count)
@@ -234,17 +195,11 @@ def handle_generation():
             q_ids.append(new_q.id)
         
         db.session.commit()
-
         session.update({
-            'active_questions': q_ids,
-            'is_mistake_review': False,
-            'current_idx': 0,
-            'score': 0,
-            'quiz_topic': mastery_label,
-            'quiz_goal': quiz_goal,
-            'user_answers': [], 
-            'time_limit': (count * 30),
-            'start_time': time.time()
+            'active_questions': q_ids, 'is_mistake_review': False,
+            'current_idx': 0, 'score': 0, 'quiz_topic': mastery_label,
+            'quiz_goal': quiz_goal, 'user_answers': [], 
+            'time_limit': (count * 30), 'start_time': time.time()
         })
         return redirect(url_for('routes.quiz_page', q_id=q_ids[0]))
     except Exception as e:
@@ -259,211 +214,83 @@ def handle_generation():
 @routes_bp.route('/quiz/<int:q_id>')
 @login_required
 def quiz_page(q_id):
-    if session.get('is_mistake_review'):
-        question = MistakeBank.query.get_or_404(q_id)
-    else:
-        question = Question.query.get_or_404(q_id)
-    
+    question = MistakeBank.query.get_or_404(q_id) if session.get('is_mistake_review') else Question.query.get_or_404(q_id)
     try:
         options_data = json.loads(question.options_json) if isinstance(question.options_json, str) else question.options_json
     except:
         options_data = {}
-
+    
     rem_time = 0
     if session.get('quiz_goal') == 'quiz':
         elapsed = time.time() - session.get('start_time', 0)
         rem_time = max(0, int(session.get('time_limit', 30) - elapsed))
 
-    return render_template('quiz.html', 
-                           question=question, 
-                           options=options_data,
-                           remaining_time=rem_time,
-                           current_num=session.get('current_idx', 0) + 1,
-                           total_num=len(session.get('active_questions', [])))
+    return render_template('quiz.html', question=question, options=options_data, remaining_time=rem_time,
+                           current_num=session.get('current_idx', 0) + 1, total_num=len(session.get('active_questions', [])))
 
 @routes_bp.route('/submit_answer/<int:q_id>', methods=['POST'])
 @login_required
 def submit_answer(q_id):
-    if session.get('is_mistake_review'):
-        question = MistakeBank.query.get_or_404(q_id)
-    else:
-        question = Question.query.get_or_404(q_id)
-
+    question = MistakeBank.query.get_or_404(q_id) if session.get('is_mistake_review') else Question.query.get_or_404(q_id)
     user_ans = request.form.get('answer', '').strip()
-    confidence = request.form.get('confidence', 'medium')
     is_correct = (user_ans.lower() == str(question.correct_answer).lower())
 
-    if 'user_answers' not in session:
-        session['user_answers'] = []
-    
-    temp_answers = session['user_answers']
-    temp_answers.append({
-        'question': question.question_text,
-        'user_ans': user_ans,
-        'correct_ans': question.correct_answer,
-        'is_correct': is_correct,
-        'explanation': question.explanation
-    })
-    session['user_answers'] = temp_answers
-
-    # Mastery/Spaced Repetition
-    days_to_add = 7 if (is_correct and confidence == 'high') else 3 if is_correct else 1
-    next_review_date = datetime.utcnow() + timedelta(days=days_to_add)
-
-    topic = session.get('quiz_topic', 'Topic Review')
-    m = TopicMastery.query.filter_by(user_id=current_user.id, topic_name=topic).first()
-    
-    if m is None:
-        m = TopicMastery(user_id=current_user.id, topic_name=topic, total_count=1, correct_count=0)
-        db.session.add(m)
-    else:
-        m.total_count += 1
+    if 'user_answers' not in session: session['user_answers'] = []
+    session['user_answers'].append({'question': question.question_text, 'is_correct': is_correct})
 
     if is_correct:
-        m.correct_count += 1
         session['score'] = session.get('score', 0) + 1
-        if session.get('is_mistake_review'):
-            db.session.delete(question) 
+        if session.get('is_mistake_review'): db.session.delete(question)
     else:
         if not session.get('is_mistake_review'):
-            new_mistake = MistakeBank(
-                user_id=current_user.id, 
-                question_text=question.question_text,
-                options_json=question.options_json, 
-                correct_answer=question.correct_answer,
-                explanation=question.explanation, 
-                topic=topic,
-                next_review=next_review_date,
-                confidence_level=confidence,
-                total_count=1
-            )
+            new_mistake = MistakeBank(user_id=current_user.id, question_text=question.question_text, 
+                                      options_json=question.options_json, correct_answer=question.correct_answer,
+                                      explanation=question.explanation, topic=session.get('quiz_topic'))
             db.session.add(new_mistake)
 
     db.session.commit()
     session['current_idx'] = session.get('current_idx', 0) + 1
     q_list = session.get('active_questions', [])
-    
     if session['current_idx'] < len(q_list):
         return redirect(url_for('routes.quiz_page', q_id=q_list[session['current_idx']]))
     return redirect(url_for('routes.results'))
 
-# ==========================================
-# ELI5 & RESULTS
-# ==========================================
-
-@routes_bp.route('/simplify', methods=['POST'])
-@login_required
-def simplify():
-    data = request.json
-    original_text = data.get('explanation', '')
-    prompt = f"Explain this like I'm 5 with a funny analogy: {original_text}"
-    try:
-        completion = client.chat.completions.create(
-            messages=[{"role": "user", "content": prompt}],
-            model="llama-3.3-70b-versatile",
-        )
-        return jsonify({"simplified": completion.choices[0].message.content})
-    except:
-        return jsonify({"simplified": "AI error."}), 500
-
 @routes_bp.route('/results')
 @login_required
 def results():
-    score = session.get('score', 0)
-    active_qs = session.get('active_questions', [])
-    total = len(active_qs)
-    accuracy = (score / total * 100) if total > 0 else 0
-
+    score, total = session.get('score', 0), len(session.get('active_questions', []))
     new_res = QuizResult(user_id=current_user.id, score=score, total_questions=total)
     db.session.add(new_res)
-    current_user.streak_count = (current_user.streak_count or 0) + 1
     db.session.commit()
-
-    history_results = QuizResult.query.filter_by(user_id=current_user.id)\
-        .order_by(QuizResult.date_taken.asc()).limit(10).all()
-    
-    history_labels = [r.date_taken.strftime("%b %d") for r in history_results]
-    history_scores = [int((r.score/r.total_questions)*100) if r.total_questions > 0 else 0 for r in history_results]
-
-    return render_template('results.html', 
-                           score=score, total=total, accuracy=accuracy,
-                           mastery_data=TopicMastery.query.filter_by(user_id=current_user.id).all(),
-                           history_labels=history_labels, history_scores=history_scores)
+    return render_template('results.html', score=score, total=total, accuracy=(score/total*100 if total > 0 else 0))
 
 # ==========================================
-# LIBRARY & REVIEW
+# DOWNLOAD REPORT (Fixed ReportLab Logic)
 # ==========================================
 
-@routes_bp.route('/review_mistakes')
+@routes_bp.route('/download_report/<int:res_id>')
 @login_required
-def review_mistakes():
-    now = datetime.utcnow()
-    mistakes = MistakeBank.query.filter(MistakeBank.user_id == current_user.id, MistakeBank.next_review <= now).all()
-    if not mistakes:
-        mistakes = MistakeBank.query.filter_by(user_id=current_user.id).limit(10).all()
-    if not mistakes:
-        flash("No mistakes to review!", "success")
+def download_report(res_id):
+    result = QuizResult.query.get_or_404(res_id)
+    if result.user_id != current_user.id:
         return redirect(url_for('routes.dashboard'))
-    
-    m_ids = [m.id for m in mistakes]
-    session.update({
-        'active_questions': m_ids, 'is_mistake_review': True, 
-        'current_idx': 0, 'score': 0, 'quiz_goal': 'revision', 'quiz_topic': 'Mistake Review'
-    })
-    return redirect(url_for('routes.quiz_page', q_id=m_ids[0]))
+
+    buffer = io.BytesIO()
+    p = canvas.Canvas(buffer, pagesize=letter)
+    p.setFont("Helvetica-Bold", 24)
+    p.drawString(100, 750, "Quiz Performance Report")
+    p.setFont("Helvetica", 14)
+    p.drawString(100, 700, f"User: {current_user.username}")
+    p.drawString(100, 680, f"Score: {result.score} / {result.total_questions}")
+    p.showPage()
+    p.save()
+    buffer.seek(0)
+    return send_file(buffer, mimetype='application/pdf', as_attachment=True, download_name=f"Report_{res_id}.pdf")
 
 @routes_bp.route('/library')
 @login_required
 def library():
     questions = Question.query.filter_by(user_id=current_user.id).order_by(Question.id.desc()).limit(50).all()
     for q in questions:
-        try:
-            q.options = json.loads(q.options_json) if isinstance(q.options_json, str) else q.options_json
-        except:
-            q.options = {}
+        q.options = json.loads(q.options_json) if isinstance(q.options_json, str) else q.options_json
     return render_template('library.html', questions=questions)
-    
-@routes_bp.route('/download_report/<int:res_id>')
-@login_required
-def download_report(res_id):
-    try:
-        # 1. Fetch result from SQLAlchemy (not MongoDB)
-        result = QuizResult.query.get_or_404(res_id)
-        
-        # 2. Security Check
-        if result.user_id != current_user.id:
-            flash("Unauthorized access.", "danger")
-            return redirect(url_for('routes.dashboard'))
-
-        # 3. Create a Byte stream for the PDF (Saves RAM on Render)
-        buffer = io.BytesIO()
-        p = canvas.Canvas(buffer, pagesize=letter)
-        
-        # 4. Draw PDF Content using ReportLab
-        p.setFont("Helvetica-Bold", 20)
-        p.drawString(100, 750, "Quiz Performance Report")
-        
-        p.setFont("Helvetica", 12)
-        p.drawString(100, 720, f"User: {current_user.username}")
-        p.drawString(100, 700, f"Date: {result.date_taken.strftime('%Y-%m-%d %H:%M')}")
-        p.drawString(100, 680, f"Score: {result.score} / {result.total_questions}")
-        
-        # Calculate Accuracy
-        accuracy = (result.score / result.total_questions * 100) if result.total_questions > 0 else 0
-        p.drawString(100, 660, f"Accuracy: {int(accuracy)}%")
-
-        p.showPage()
-        p.save()
-
-        # 5. Send the file back to the browser
-        buffer.seek(0)
-        return send_file(
-            buffer,
-            mimetype='application/pdf',
-            as_attachment=True,
-            download_name=f"Report_{result.id}.pdf"
-        )
-    except Exception as e:
-        print(f"PDF Error: {e}")
-        flash("Could not generate PDF.", "danger")
-        return redirect(url_for('routes.dashboard'))
