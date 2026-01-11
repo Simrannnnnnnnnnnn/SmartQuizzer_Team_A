@@ -24,7 +24,6 @@ llm = LLMClient(api_key=os.getenv("GROQ_API_KEY"))
 # ==========================================
 # HELPER: VISION OCR (Fixed Model)
 # ==========================================
-
 def extract_text_via_groq_vision(file_storage):
     if not file_storage:
         return ""
@@ -38,14 +37,14 @@ def extract_text_via_groq_vision(file_storage):
         image_bytes = img_byte_arr.getvalue()
         encoded_image = base64.b64encode(image_bytes).decode('utf-8')
         
-        # CHANGED: Use the stable Llama 3.2 Vision model
+        # UPDATED: Using the active 90b vision model
         response = client.chat.completions.create(
-            model="llama-3.2-11b-vision-preview",
+            model="llama-3.2-90b-vision-preview", 
             messages=[
                 {
                     "role": "user",
                     "content": [
-                        {"type": "text", "text": "Extract all text from this image accurately. Maintain clear formatting."},
+                        {"type": "text", "text": "Extract all text from this image accurately. Maintain clear formatting for notes."},
                         {
                             "type": "image_url",
                             "image_url": {"url": f"data:image/jpeg;base64,{encoded_image}"}
@@ -58,7 +57,6 @@ def extract_text_via_groq_vision(file_storage):
     except Exception as e:
         print(f"Vision API Error: {e}")
         return ""
-
 # ==========================================
 # AUTHENTICATION
 # ==========================================
